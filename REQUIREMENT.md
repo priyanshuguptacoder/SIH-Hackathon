@@ -519,14 +519,7 @@ RESTful design.
 ## 25. VIBE-CODING / MULTI-AI DEVELOPMENT
 **Problem:** 5 developers using AI tools (Cursor, Copilot, Antigravity) will cause architectural drift because AIs lack global context.
 **Solution:** Strict adherence to shared contracts.
-Future files to be created (DO NOT CREATE NOW):
-- `API.md`: Exact JSON contracts.
-- `DB_SCHEMA.md`: Mongoose schemas.
-- `RULES.md`: Rules engine syntax.
-- `AUTH.md`: Authentication flows.
-- `AI.md`: AI prompts and tools.
-- `PROGRESS.md`: Current project status.
-- `CONTRIBUTING.md`: Contribution guidelines.
+All contracts (DB schema, API shapes, auth, progress log) live in this file, Sections 39–42. Do not create separate contract files.
 *These files act as the "context window" for future AI sessions.*
 
 ## 26. AI CODING SESSION WORKFLOW
@@ -632,3 +625,416 @@ Person 3: Rules Engine
 Person 4: Workflow & Compliance
 Person 5: AI, RAG, Doc Intelligence
 ```
+
+## 39. DATABASE SCHEMA (ACTUAL MONGOOSE)
+
+```javascript
+const mongoose = require('mongoose');
+
+// 1. users
+const userSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    role: { type: String, enum: ['Admin', 'Industry'], default: 'Industry' }
+  },
+  { timestamps: true }
+);
+
+// 2. industries
+const industrySchema = new mongoose.Schema(
+  {
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    companyName: { type: String, required: true },
+    sector: { type: String, required: true },
+    state: { type: String, required: true },
+    district: { type: String, required: true },
+    projectLocation: { type: String, required: true },
+    pincode: { type: String, required: true },
+    investment: { type: Number, required: true },
+    employees: { type: Number, required: true },
+    productionCapacity: { type: Number, required: true },
+    manufacturingActivity: { type: String, required: true },
+    processes: { type: String, required: true },
+    waterUsage: { type: Number, required: true },
+    generatesWastewater: { type: Boolean, required: true },
+    hazardousWaste: { type: Boolean, required: true },
+    projectStage: { 
+      type: String, 
+      enum: ['Pre-establishment', 'construction', 'pre-operation', 'operational', 'expansion'], 
+      required: true 
+    }
+  },
+  { timestamps: true }
+);
+
+// 3. approvals
+const approvalSchema = new mongoose.Schema(
+  {
+    approvalName: { type: String, required: true },
+    authority: { type: String, required: true }
+  },
+  { timestamps: true }
+);
+
+// 4. regulatory_rules
+const regulatoryRuleSchema = new mongoose.Schema(
+  {
+    ruleId: { type: String, required: true, unique: true },
+    approvalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Approval', required: true },
+    condition: { type: mongoose.Schema.Types.Mixed, required: true },
+    explanationTemplate: { type: String, required: true },
+    priority: { type: Number, required: true },
+    effectiveDate: { type: Date, required: true },
+    version: { type: String, required: true }
+  },
+  { timestamps: true }
+);
+
+// 5. applications
+const applicationSchema = new mongoose.Schema(
+  {
+    industryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Industry', required: true, index: true },
+    approvalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Approval', required: true },
+    status: { 
+      type: String, 
+      enum: ['NOT_STARTED', 'DOCUMENTS_PREPARED', 'SUBMITTED', 'UNDER_REVIEW', 'INSPECTION', 'APPROVED', 'REJECTED'],
+      default: 'NOT_STARTED'
+    },
+    submissionDate: { type: Date },
+    expectedCompletionDate: { type: Date },
+    inspectionDate: { type: Date },
+    approvalDate: { type: Date },
+    remarks: { type: String }
+  },
+  { timestamps: true }
+);
+
+// 6. documents
+const documentSchema = new mongoose.Schema(
+  {
+    industryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Industry', required: true, index: true },
+    approvalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Approval', required: false },
+    fileUrl: { type: String, required: true },
+    documentType: { type: String, required: true },
+    companyName: { type: String },
+    licenseNumber: { type: String },
+    expiryDate: { type: Date }
+  },
+  { timestamps: true }
+);
+
+// 7. compliance_items
+const complianceItemSchema = new mongoose.Schema(
+  {
+    industryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Industry', required: true, index: true },
+    approvalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Approval', required: true },
+    requirementText: { type: String, required: true },
+    recurrence: { 
+      type: String, 
+      enum: ['ONE_TIME', 'MONTHLY', 'QUARTERLY', 'ANNUAL', 'RENEWAL'], 
+      required: true 
+    },
+    status: { 
+      type: String, 
+      enum: ['UPCOMING', 'DUE', 'OVERDUE', 'COMPLETED'], 
+      default: 'UPCOMING' 
+    },
+    dueDate: { type: Date, required: true },
+    source: { type: String }
+  },
+  { timestamps: true }
+);
+```
+
+## 40. API CONTRACTS (REQUEST/RESPONSE SHAPES)
+
+```http
+POST /auth/register
+Content-Type: application/json
+```
+Request:
+```json
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "password": "SecurePassword123",
+  "confirmPassword": "SecurePassword123"
+}
+```
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1...",
+    "userId": "60d0fe4f5311236168a109ca"
+  }
+}
+```
+
+```http
+POST /auth/login
+Content-Type: application/json
+```
+Request:
+```json
+{
+  "email": "jane@example.com",
+  "password": "SecurePassword123"
+}
+```
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1..."
+  }
+}
+```
+
+```http
+POST /industries
+Authorization: Bearer <JWT>
+Content-Type: application/json
+```
+Request:
+```json
+{
+  "companyName": "ABC Textiles Pvt Ltd",
+  "sector": "Textiles",
+  "state": "Maharashtra",
+  "district": "Pune",
+  "projectLocation": "Pune MIDC",
+  "pincode": "411001",
+  "investment": 200000000,
+  "employees": 100,
+  "productionCapacity": 5000,
+  "manufacturingActivity": "Dyeing",
+  "processes": "Dyeing, Weaving",
+  "waterUsage": 10000,
+  "generatesWastewater": true,
+  "hazardousWaste": false,
+  "projectStage": "Pre-establishment"
+}
+```
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "industryId": "60d0fe4f5311236168a109cb"
+  }
+}
+```
+
+```http
+GET /industries/me
+Authorization: Bearer <JWT>
+```
+Request: (No body)
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "industryId": "60d0fe4f5311236168a109cb",
+    "companyName": "ABC Textiles Pvt Ltd",
+    "sector": "Textiles",
+    "state": "Maharashtra",
+    "projectStage": "Pre-establishment"
+  }
+}
+```
+
+```http
+POST /approvals/analyze
+Authorization: Bearer <JWT>
+Content-Type: application/json
+```
+Request:
+```json
+{
+  "industryId": "60d0fe4f5311236168a109cb"
+}
+```
+Response:
+```json
+{
+  "success": true,
+  "message": "Analysis complete. Redirect to Roadmap."
+}
+```
+
+```http
+GET /approvals/roadmap/:industryId
+Authorization: Bearer <JWT>
+```
+Request: (No body)
+Response:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "approvalId": "60d0fe4f5311236168a109cc",
+      "approvalName": "Consent to Establish (Pollution)",
+      "authority": "Maharashtra Pollution Control Board",
+      "status": "Required",
+      "reason": "Required because your project is in the Textiles sector and generates wastewater.",
+      "documents": ["Site Plan", "Water Balance Diagram"]
+    }
+  ]
+}
+```
+
+```http
+PUT /applications/:id/status
+Authorization: Bearer <JWT>
+Content-Type: application/json
+```
+Request:
+```json
+{
+  "status": "SUBMITTED"
+}
+```
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "status": "SUBMITTED",
+    "submissionDate": "2026-08-28T00:00:00Z"
+  }
+}
+```
+
+```http
+POST /documents/upload
+Authorization: Bearer <JWT>
+Content-Type: multipart/form-data
+```
+Request:
+```text
+file: <binary>
+industryId: "60d0fe4f5311236168a109cb"
+approvalId: "60d0fe4f5311236168a109cc"
+```
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "documentId": "60d0fe4f5311236168a109cd",
+    "fileUrl": "https://storage.example.com/file.pdf"
+  }
+}
+```
+
+```http
+GET /compliance
+Authorization: Bearer <JWT>
+```
+Request: (No body)
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "complianceScore": 87,
+    "items": [
+      {
+        "complianceId": "60d0fe4f5311236168a109ce",
+        "requirementText": "Submit Monthly Water Quality Report",
+        "dueDate": "2026-09-28T00:00:00Z",
+        "status": "UPCOMING",
+        "recurrence": "MONTHLY"
+      }
+    ]
+  }
+}
+```
+
+```http
+POST /ai/chat
+Authorization: Bearer <JWT>
+Content-Type: application/json
+```
+Request:
+```json
+{
+  "query": "What are the specific parameters for textile wastewater in Maharashtra?"
+}
+```
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "response": "According to the Maharashtra Pollution Control Board, the effluent standards require...",
+    "citations": ["Maharashtra Pollution Control Board Notification 2023, Page 4, Section 2"]
+  }
+}
+```
+
+## 41. AUTH CONTRACT
+
+### JWT Payload
+```json
+{
+  "sub": "USER_ID",
+  "role": "Industry",
+  "iat": 1693245600,
+  "exp": 1693332000
+}
+```
+- **sub**: The user's unique MongoDB `_id` (`userId`).
+- **role**: The role of the user (`Industry` or `Admin`).
+- **iat**: Issued at timestamp.
+- **exp**: Expiration timestamp.
+- **Not included**: Sensitive data like passwords, emails, or personal information.
+
+### req.user
+After passing through the authentication middleware, the Express request object will be populated with:
+```javascript
+req.user = {
+  id: "USER_ID",
+  role: "Industry"
+};
+```
+
+### Authorization Header
+Clients must include the JWT in the `Authorization` header for all protected endpoints:
+```http
+Authorization: Bearer <JWT>
+```
+The backend middleware verifies this token. If missing, expired, or invalid, it returns `401 Unauthorized`.
+
+### Roles
+- **Industry**: The primary user role. Can create profiles, upload documents, and view their own applications and compliance items.
+- **Admin**: The secondary user role. Can manage the deterministic rules engine, upload official PDFs for RAG, and oversee system metrics.
+
+## 42. PROGRESS LOG
+
+Every AI coding session must append an entry here before ending work, and must read the last 3-5 entries before starting new work.
+
+### Person <N> — <date>
+Done: ...
+Stubbed: ...
+Breaking changes: none
+Next: ...
+
+### Person <N> — <date>
+Done: ...
+Stubbed: ...
+Breaking changes: none
+Next: ...
+
+### Person <N> — <date>
+Done: ...
+Stubbed: ...
+Breaking changes: none
+Next: ...
