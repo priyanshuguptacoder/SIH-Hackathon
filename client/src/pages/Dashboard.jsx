@@ -80,7 +80,7 @@ const Dashboard = () => {
             try {
               const schRes = await api.get(`/schemes/matched/${ind._id}`);
               setSchemes(schRes.data.data || []);
-            } catch (err) {
+            } catch {
               setSchemes([]);
             }
           } else {
