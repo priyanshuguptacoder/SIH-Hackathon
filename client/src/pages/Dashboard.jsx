@@ -61,62 +61,54 @@ const Dashboard = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+
+
   // ── fetch ──────────────────────────────────────────────────────────────────
   useEffect(() => {
-  const fetchAll = async () => {
-    const [indRes, appRes, compRes] = await Promise.allSettled([
-      api.get("/industries/me"),
-      api.get("/applications"),
-      api.get("/compliance"),
-    ]);
+    const fetchAll = async () => {
+      try {
+        const [indRes, appRes, compRes] = await Promise.allSettled([
+          api.get("/industries/me"),
+          api.get("/applications"),
+          api.get("/compliance"),
+        ]);
 
-    if (indRes.status === "fulfilled") {
-      const ind = indRes.value.data.data;
-      setIndustry(ind);
-
-      if (ind?._id) {
-        try {
-          const schRes = await api.get(
-            `/schemes/matched/${ind._id}`
-          );
-
-          setSchemes(schRes.data.data || []);
-        } catch (err) {
-          console.error("Schemes fetch error:", err);
+        if (indRes.status === "fulfilled") {
+          const ind = indRes.value.data.data;
+          setIndustry(ind);
+          if (ind?._id) {
+            try {
+              const schRes = await api.get(`/schemes/matched/${ind._id}`);
+              setSchemes(schRes.data.data || []);
+            } catch (err) {
+              setSchemes([]);
+            }
+          } else {
+            setSchemes([]);
+          }
+        } else {
+          setIndustry(null);
           setSchemes([]);
         }
-      } else {
-        setSchemes([]);
+
+        if (appRes.status === "fulfilled") {
+          setApplications(appRes.value.data.data || []);
+        } else {
+          setApplications([]);
+        }
+
+        if (compRes.status === "fulfilled") {
+          setCompliance(compRes.value.data.data || []);
+        } else {
+          setCompliance([]);
+        }
+      } finally {
+        setLoading(false);
       }
-    } else {
-      console.error("Industry fetch error:", indRes.reason);
-      setIndustry(null);
-      setSchemes([]);
-    }
+    };
 
-    if (appRes.status === "fulfilled") {
-      setApplications(appRes.value.data.data || []);
-    } else {
-      console.error(
-        "Applications fetch error:",
-        appRes.reason
-      );
-      setApplications([]);
-    }
-
-    if (compRes.status === "fulfilled") {
-      setCompliance(compRes.value.data.data || []);
-    } else {
-      console.error(
-        "Compliance fetch error:",
-        compRes.reason
-      );
-      setCompliance([]);
-    }
-  };
-
-  fetchAll();
-}, []);
+    fetchAll();
+  }, []);
 
   // ── derived metrics ────────────────────────────────────────────────────────
   const activeCount  = applications.filter(a =>
@@ -675,7 +667,7 @@ const Dashboard = () => {
           <div className="px-4 py-3 bg-[#4f378a] flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Bot size={18} className="text-white" />
-              <span className="text-white font-semibold text-sm">Bharat AI Assistant</span>
+              <span className="text-white font-semibold text-sm">AI Assistant</span>
             </div>
             <button onClick={() => setShowAIChat(false)}><X size={16} className="text-white/70 hover:text-white" /></button>
           </div>
