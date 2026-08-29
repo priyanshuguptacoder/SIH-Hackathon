@@ -7,7 +7,7 @@ const createIndustryProfile = async (req, res) => {
   try {
     const existing = await Industry.findOne({ userId: req.user.id });
     if (existing) {
-      return res.status(400).json({ success: false, error: 'Industry profile already exists for this user' });
+      return res.status(400).json({ success: false, error: { code: 'DUPLICATE', message: 'Industry profile already exists for this user' } });
     }
 
     const industryData = { ...req.body, userId: req.user.id };
@@ -23,9 +23,9 @@ const createIndustryProfile = async (req, res) => {
   } catch (error) {
     console.error('Create Industry Error:', error);
     if (error.name === 'ValidationError') {
-      return res.status(400).json({ success: false, error: error.message });
+      return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: error.message } });
     }
-    return res.status(500).json({ success: false, error: 'Server error creating industry profile' });
+    return res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Server error creating industry profile' } });
   }
 };
 
@@ -48,7 +48,7 @@ const getMyIndustryProfile = async (req, res) => {
     });
   } catch (error) {
     console.error('Get Industry Error:', error);
-    return res.status(500).json({ success: false, error: 'Server error fetching industry profile' });
+    return res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Server error fetching industry profile' } });
   }
 };
 
@@ -60,12 +60,12 @@ const updateIndustryProfile = async (req, res) => {
     let industry = await Industry.findById(req.params.id);
     
     if (!industry) {
-      return res.status(404).json({ success: false, error: 'Industry profile not found' });
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Industry profile not found' } });
     }
 
     // Ownership check
     if (industry.userId.toString() !== req.user.id && req.user.role !== 'Admin') {
-      return res.status(403).json({ success: false, error: 'Not authorized to update this profile' });
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized to update this profile' } });
     }
 
     industry = await Industry.findByIdAndUpdate(
@@ -81,9 +81,9 @@ const updateIndustryProfile = async (req, res) => {
   } catch (error) {
     console.error('Update Industry Error:', error);
     if (error.name === 'ValidationError') {
-      return res.status(400).json({ success: false, error: error.message });
+      return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: error.message } });
     }
-    return res.status(500).json({ success: false, error: 'Server error updating industry profile' });
+    return res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Server error updating industry profile' } });
   }
 };
 
