@@ -11,11 +11,11 @@ const getMatchedSchemes = async (req, res) => {
     
     const industry = await Industry.findById(industryId);
     if (!industry) {
-      return res.status(404).json({ success: false, error: 'Industry profile not found' });
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Industry profile not found' } });
     }
 
     if (industry.userId.toString() !== req.user.id && req.user.role !== 'Admin') {
-      return res.status(403).json({ success: false, error: 'Not authorized' });
+      return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized' } });
     }
 
     const schemes = await Scheme.find({});
@@ -38,7 +38,7 @@ const getMatchedSchemes = async (req, res) => {
     });
   } catch (error) {
     console.error('Get Schemes Error:', error);
-    return res.status(500).json({ success: false, error: 'Server error fetching schemes' });
+    return res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Server error fetching schemes' } });
   }
 };
 

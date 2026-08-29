@@ -8,7 +8,7 @@ const chat = async (req, res) => {
     const { message, industryId } = req.body;
     
     if (!message) {
-      return res.status(400).json({ success: false, error: 'Message is required' });
+      return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Message is required' } });
     }
 
     const aiResponse = await chatWithAI(message, industryId, req.user.id);
@@ -19,7 +19,7 @@ const chat = async (req, res) => {
     });
   } catch (error) {
     console.error('AI Chat Error:', error);
-    return res.status(500).json({ success: false, error: 'Server error processing AI request' });
+    return res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: 'Server error processing AI request' } });
   }
 };
 
