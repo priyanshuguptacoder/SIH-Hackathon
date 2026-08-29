@@ -63,35 +63,60 @@ const Dashboard = () => {
 
   // ── fetch ──────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        // 1. Industry profile (needed for industryId → schemes)
-        const indRes = await api.get("/industries/me");
-        const ind = indRes.data.data;
-        setIndustry(ind);
+  const fetchAll = async () => {
+    const [indRes, appRes, compRes] = await Promise.allSettled([
+      api.get("/industries/me"),
+      api.get("/applications"),
+      api.get("/compliance"),
+    ]);
 
-        // 2. Applications for this industry
-        const appRes = await api.get("/applications");
-        setApplications(appRes.data.data || []);
+    if (indRes.status === "fulfilled") {
+      const ind = indRes.value.data.data;
+      setIndustry(ind);
 
-        // 3. Compliance items
-        const compRes = await api.get("/compliance");
-        setCompliance(compRes.data.data || []);
+      if (ind?._id) {
+        try {
+          const schRes = await api.get(
+            `/schemes/matched/${ind._id}`
+          );
 
-        // 4. Matched schemes (only if industry exists)
-        if (ind?._id) {
-          const schRes = await api.get(`/schemes/matched/${ind._id}`);
           setSchemes(schRes.data.data || []);
+        } catch (err) {
+          console.error("Schemes fetch error:", err);
+          setSchemes([]);
         }
-      } catch (err) {
-        // Industry profile may not exist yet — that's fine
-        console.error("Dashboard fetch error:", err?.response?.data || err.message);
-      } finally {
-        setLoading(false);
+      } else {
+        setSchemes([]);
       }
-    };
-    fetchAll();
-  }, []);
+    } else {
+      console.error("Industry fetch error:", indRes.reason);
+      setIndustry(null);
+      setSchemes([]);
+    }
+
+    if (appRes.status === "fulfilled") {
+      setApplications(appRes.value.data.data || []);
+    } else {
+      console.error(
+        "Applications fetch error:",
+        appRes.reason
+      );
+      setApplications([]);
+    }
+
+    if (compRes.status === "fulfilled") {
+      setCompliance(compRes.value.data.data || []);
+    } else {
+      console.error(
+        "Compliance fetch error:",
+        compRes.reason
+      );
+      setCompliance([]);
+    }
+  };
+
+  fetchAll();
+}, []);
 
   // ── derived metrics ────────────────────────────────────────────────────────
   const activeCount  = applications.filter(a =>
@@ -261,6 +286,8 @@ const Dashboard = () => {
             <div className="relative" ref={notifRef}>
               <button
                 type="button"
+                aria-label="Toggle notifications"
+                aria-expanded={showNotifications}
                 onClick={() => { setShowNotifications(v => !v); setShowProfile(false); }}
                 className="w-10 h-10 rounded-full flex items-center justify-center text-[#494551] hover:bg-[#f2ecf4] transition-colors"
               >
@@ -583,12 +610,16 @@ const Dashboard = () => {
                   {upcomingDeadlines.map((item) => {
                     const days = daysUntil(item.dueDate);
                     const color = deadlineColor(days);
+                    const absDays = Math.abs(days);
+                    const dueText = days < 0
+                       ? `Overdue by ${absDays} Day${absDays !== 1 ? "s" : ""} (${formatDeadlineDate(item.dueDate)})`
+                       : `Due in ${days} Day${days !== 1 ? "s" : ""} (${formatDeadlineDate(item.dueDate)})`;
                     return (
                       <Deadline
                         key={item._id}
                         color={color}
                         title={item.requirementText}
-                        due={`Due in ${days} Day${days !== 1 ? "s" : ""} (${formatDeadlineDate(item.dueDate)})`}
+                        due={dueText}
                         description={item.source || item.approvalId?.approvalName || ""}
                       />
                     );
@@ -751,10 +782,12 @@ const SchemeCard = ({ icon, title, description, url, secondary = false }) => (
     <h3 className="text-base font-semibold text-[#1d1b20] mb-2">{title}</h3>
     <p className="text-sm text-[#494551] mb-4 flex-1">{description}</p>
     <a
-      href={url || "#"}
+      href={url || undefined}
       target="_blank"
       rel="noopener noreferrer"
-      className="w-full py-2 bg-transparent border border-[#4f378a] text-[#4f378a] rounded-md text-xs font-semibold tracking-wide hover:bg-[#f2ecf4] transition-colors flex items-center justify-center gap-1"
+      aria-disabled={!url}
+      onClick={(e) => { if (!url) e.preventDefault(); }}
+      className={`w-full py-2 bg-transparent border border-[#4f378a] text-[#4f378a] rounded-md text-xs font-semibold tracking-wide hover:bg-[#f2ecf4] transition-colors flex items-center justify-center gap-1 ${url ? "" : "opacity-60 cursor-not-allowed"}`}
     >
       View Details
       {url && <ExternalLink size={12} />}
