@@ -41,7 +41,12 @@ const Login = () => {
         role: result.data.role,
       });
 
-      navigate('/dashboard');
+      // Role-based redirection: Admin goes to admin dashboard, Industry goes to dashboard
+      if (result.data.role === 'Admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       const message =
         err.response?.data?.error ||

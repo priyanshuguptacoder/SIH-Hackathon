@@ -6,6 +6,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Wizard from './pages/Wizard';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminApplicationReview from './pages/AdminApplicationReview';
 
 const App = () => {
   return (
@@ -18,8 +20,12 @@ const App = () => {
           <Route path="/register" element={<Register />} />
 
           {/* Protected routes */}
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/wizard" element={<ProtectedRoute><Wizard /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['Industry']}><Dashboard /></ProtectedRoute>} />
+          <Route path="/wizard" element={<ProtectedRoute allowedRoles={['Industry']}><Wizard /></ProtectedRoute>} />
+          
+          {/* Admin routes */}
+          <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['Admin']}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/applications/:id" element={<ProtectedRoute allowedRoles={['Admin']}><AdminApplicationReview /></ProtectedRoute>} />
         </Routes>
       </Router>
     </AuthProvider>
