@@ -36,7 +36,11 @@ const getMyIndustryProfile = async (req, res) => {
   try {
     const industry = await Industry.findOne({ userId: req.user.id });
     if (!industry) {
-      return res.status(404).json({ success: false, error: 'Industry profile not found' });
+      // Return null instead of 404 - indicates profile needs to be created
+      return res.status(200).json({
+        success: true,
+        data: null,
+      });
     }
     return res.status(200).json({
       success: true,

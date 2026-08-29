@@ -178,7 +178,8 @@ const getApplications = async (req, res) => {
   try {
     const industry = await Industry.findOne({ userId: req.user.id });
     if (!industry) {
-      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Industry profile not found' } });
+      // User doesn't have an industry profile yet - return empty array instead of 404
+      return res.json({ success: true, data: [] });
     }
 
     const applications = await Application.find({ industryId: industry._id }).populate('approvalId');
