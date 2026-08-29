@@ -118,21 +118,94 @@ The project is designed to be built concurrently by a 5-person team without merg
 
 ### Prerequisites
 - Node.js (v18+)
-- MongoDB Atlas cluster (with Vector Search capabilities)
-- AI Provider API Key (e.g., Gemini API Key)
+- MongoDB running locally (`mongodb://127.0.0.1:27017`)
 
 ### Installation
+
 1. **Clone the repository:**
    ```bash
    git clone git@github.com:priyanshuguptacoder/SIH-Hackathon.git
    cd SIH-Hackathon
    ```
-2. **Install dependencies:**
-   *(Wait for future updates - server and client folders will be initialized shortly)*
-3. **Set up Environment Variables:**
-   Create a `.env` file in the backend directory with your `MONGODB_URI`, `JWT_SECRET`, and `AI_API_KEY`.
-4. **Run the development servers:**
-   *(Commands to be added once frontend/backend scaffolds are present)*
+
+2. **Install server dependencies:**
+   ```bash
+   cd server
+   npm install
+   ```
+
+3. **Install client dependencies:**
+   ```bash
+   cd ../client
+   npm install
+   ```
+
+4. **Set up server environment variables:**
+
+   Create `server/.env` (copy from `.env.example`):
+   ```
+   PORT=5000
+   MONGODB_URI=mongodb://127.0.0.1:27017/sih-db
+   JWT_SECRET=jwt_secret_sih_hackathon_2026
+   SEED_SECRET=sih_seed_secret_2026_changeme
+   ADMIN_NAME=Admin Authority
+   ADMIN_EMAIL=admin@gmail.com
+   ADMIN_PASSWORD=Admin@123
+   ```
+
+   Create `client/.env`:
+   ```
+   VITE_API_URL=http://localhost:5000
+   ```
+
+5. **Seed the database (approval types, rules, schemes):**
+   ```bash
+   cd server
+   node src/scripts/seed.js
+   ```
+
+6. **Create the Admin account** *(run once — skips automatically if admin already exists):*
+   ```bash
+   cd server
+   node src/scripts/createAdmin.js
+   ```
+
+7. **Start the servers** (two terminals):
+   ```bash
+   # Terminal 1 — Backend
+   cd server
+   npm run dev
+
+   # Terminal 2 — Frontend
+   cd client
+   npm run dev
+   ```
+
+8. **Open the app:** `http://localhost:5173`
+
+---
+
+### Login Credentials
+
+| Role | Email | Password | Lands on |
+|------|-------|----------|----------|
+| **Admin (Authority)** | `admin@gmail.com` | `Admin@123` | `/admin/dashboard` |
+| **Industry** | Register at `/register` | your password | `/dashboard` |
+
+> Both roles use the same `/login` page. The role stored in the database determines where you are redirected after login.
+
+---
+
+### After Deployment
+
+To create the Admin account on a deployed server (where you cannot run local scripts):
+
+```bash
+curl -X POST https://your-api-url.com/admin/seed-admin \
+  -H "x-seed-secret: sih_seed_secret_2026_changeme"
+```
+
+Set `SEED_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, and `ADMIN_NAME` as environment variables on your hosting platform before calling this endpoint.
 
 ---
 

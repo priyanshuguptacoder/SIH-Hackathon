@@ -57,6 +57,8 @@ const register = async (req, res) => {
       });
     }
 
+    // Create user — password is hashed by the pre-save hook in User model
+    // PUBLIC REGISTRATION: Force 'Industry' role (never trust client-provided role)
     const user = new User({
       name,
       email: email.toLowerCase(),

@@ -5,6 +5,8 @@ const Scheme = require('../models/Scheme');
 const AuditLog = require('../models/AuditLog');
 const Application = require('../models/Application');
 const User = require('../models/User');
+const Industry = require('../models/Industry');
+const Document = require('../models/Document');
 
 // ─── Approvals ────────────────────────────────────────────────────────────────
 
@@ -125,6 +127,14 @@ const getDashboardStats = async (req, res) => {
       { $group: { _id: '$status', count: { $sum: 1 } } }
     ]);
 
+    // Add application review counts for Admin (acting as Authority)
+    const [pendingApproval, underReview, approved, rejected] = await Promise.all([
+      Application.countDocuments({ status: 'SUBMITTED' }),
+      Application.countDocuments({ status: 'UNDER_REVIEW' }),
+      Application.countDocuments({ status: 'APPROVED' }),
+      Application.countDocuments({ status: 'REJECTED' })
+    ]);
+
     return res.json({
       success: true,
       data: {
@@ -132,7 +142,13 @@ const getDashboardStats = async (req, res) => {
         totalApplications,
         activeRules,
         totalSchemes,
-        applicationsByStatus
+        applicationsByStatus,
+        reviewStats: {
+          pendingApproval,
+          underReview,
+          approved,
+          rejected
+        }
       }
     });
   } catch (err) {
@@ -152,11 +168,159 @@ const getAuditLogs = async (req, res) => {
   }
 };
 
+// ─── Application Review (Admin acting as Authority) ──────────────────────────
+
+const getApplicationsForReview = async (req, res) => {
+  try {
+    const { status } = req.query;
+
+    const filter = {};
+    if (status) {
+      filter.status = status;
+    } else {
+      // Default: Show applications that need Admin/Authority attention
+      filter.status = { $in: ['SUBMITTED', 'UNDER_REVIEW', 'INSPECTION'] };
+    }
+
+    const applications = await Application.find(filter)
+      .populate('industryId')
+      .populate('approvalId')
+      .sort({ submissionDate: -1 });
+
+    return res.json({ success: true, data: applications });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: err.message } });
+  }
+};
+
+const getApplicationForReview = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const application = await Application.findById(id)
+      .populate('industryId')
+      .populate('approvalId');
+
+    if (!application) {
+      return res.status(404).json({ 
+        success: false, 
+        error: { code: 'NOT_FOUND', message: 'Application not found' } 
+      });
+    }
+
+    // Get documents for this application (by industryId + approvalId)
+    const docQuery = { industryId: application.industryId._id };
+    if (application.approvalId) {
+      docQuery.approvalId = application.approvalId._id;
+    }
+    const documents = await Document.find(docQuery);
+
+    return res.json({ 
+      success: true, 
+      data: { 
+        application: application.toObject(),
+        documents 
+      } 
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: err.message } });
+  }
+};
+
+const reviewApplication = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action, remarks } = req.body;
+
+    // Valid actions: 'approve', 'reject', 'query', 'inspection'
+    if (!action || !['approve', 'reject', 'query', 'inspection'].includes(action)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: { code: 'VALIDATION_ERROR', message: 'Valid action required: approve, reject, query, or inspection' } 
+      });
+    }
+
+    const application = await Application.findById(id)
+      .populate('industryId')
+      .populate('approvalId');
+
+    if (!application) {
+      return res.status(404).json({ 
+        success: false, 
+        error: { code: 'NOT_FOUND', message: 'Application not found' } 
+      });
+    }
+
+    const now = new Date();
+    let newStatus;
+    let actionText;
+
+    switch (action) {
+      case 'approve':
+        newStatus = 'APPROVED';
+        actionText = 'Application approved by Authority';
+        application.approvalDate = now;
+        break;
+
+      case 'reject':
+        newStatus = 'REJECTED';
+        actionText = 'Application rejected by Authority';
+        application.rejectionDate = now;
+        break;
+
+      case 'query':
+        newStatus = 'UNDER_REVIEW';
+        actionText = 'Query raised by Authority - additional information requested';
+        break;
+
+      case 'inspection':
+        newStatus = 'INSPECTION';
+        actionText = 'Inspection scheduled by Authority';
+        application.inspectionDate = now;
+        break;
+    }
+
+    const previousStatus = application.status;
+    application.status = newStatus;
+    application.remarks = remarks || actionText;
+
+    // Record status history
+    application.statusHistory.push({ 
+      status: newStatus, 
+      changedAt: now, 
+      remarks: remarks || actionText 
+    });
+
+    await application.save();
+
+    // Audit log
+    AuditLog.record({
+      userId: req.user.id,
+      action: `ADMIN_${action.toUpperCase()}`,
+      targetModel: 'Application',
+      targetId: application._id,
+      previousValue: { status: previousStatus },
+      newValue: { status: newStatus, remarks: application.remarks }
+    });
+
+    return res.json({ 
+      success: true, 
+      data: application,
+      message: actionText
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: err.message } });
+  }
+};
+
 module.exports = {
   createApproval, updateApproval, listApprovals,
   createRule, updateRule, listRules,
   createComplianceRule, listComplianceRules,
   createScheme, listSchemes,
   getDashboardStats,
-  getAuditLogs
+  getAuditLogs,
+  getApplicationsForReview,
+  getApplicationForReview,
+  reviewApplication
 };

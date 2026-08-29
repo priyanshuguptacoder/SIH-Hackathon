@@ -37,10 +37,8 @@ const getComplianceItems = async (req, res) => {
   try {
     const industry = await Industry.findOne({ userId: req.user.id });
     if (!industry && req.user.role !== 'Admin') {
-      return res.status(404).json({
-        success: false,
-        error: { code: 'NOT_FOUND', message: 'Industry profile not found' }
-      });
+      // User doesn't have an industry profile yet - return empty array instead of 404
+      return res.json({ success: true, data: [] });
     }
 
     const query = req.user.role === 'Admin' ? {} : { industryId: industry._id };
