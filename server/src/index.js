@@ -1,5 +1,9 @@
 require('dotenv').config();
+const validateEnv = require('./utils/validateEnv');
+validateEnv(); // ← exits process loudly if MONGODB_URI or JWT_SECRET are missing
+
 const express = require('express');
+
 const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');

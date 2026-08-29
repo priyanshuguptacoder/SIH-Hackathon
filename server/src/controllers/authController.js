@@ -1,11 +1,14 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Helper: Generate JWT
+// Helper: Generate JWT — fails loudly if JWT_SECRET not set
 const generateToken = (user) => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured in environment');
+  }
   return jwt.sign(
     { id: user._id, role: user.role, name: user.name },
-    process.env.JWT_SECRET || 'jwt_secret_sih_hackathon_2026',
+    process.env.JWT_SECRET,
     { expiresIn: '24h' }
   );
 };
@@ -16,24 +19,42 @@ const generateToken = (user) => {
 const register = async (req, res) => {
   const { name, email, password, confirmPassword, role } = req.body;
 
-  // Validation
   if (!name || !email || !password || !confirmPassword) {
-    return res.status(400).json({ success: false, error: 'Please fill all required fields' });
+    return res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: 'Please fill all required fields' }
+    });
   }
 
   if (password !== confirmPassword) {
-    return res.status(400).json({ success: false, error: 'Passwords do not match' });
+    return res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: 'Passwords do not match' }
+    });
   }
 
   if (password.length < 6) {
-    return res.status(400).json({ success: false, error: 'Password must be at least 6 characters' });
+    return res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: 'Password must be at least 6 characters' }
+    });
+  }
+
+  // Prevent clients from self-assigning Admin role
+  if (role && role === 'Admin') {
+    return res.status(403).json({
+      success: false,
+      error: { code: 'FORBIDDEN', message: 'Cannot self-assign Admin role' }
+    });
   }
 
   try {
-    // Check for duplicate email
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
-      return res.status(400).json({ success: false, error: 'Email already exists' });
+      return res.status(400).json({
+        success: false,
+        error: { code: 'DUPLICATE_EMAIL', message: 'Email already exists' }
+      });
     }
 
     // Create user — password is hashed by the pre-save hook in User model
@@ -42,11 +63,10 @@ const register = async (req, res) => {
       name,
       email: email.toLowerCase(),
       password,
-      role: 'Industry',  // Always 'Industry' for public registration
+      role: 'Industry', // Always default — Admin must be set directly in DB
     });
 
     await user.save();
-
     const token = generateToken(user);
 
     return res.status(201).json({
@@ -60,8 +80,11 @@ const register = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Register Error:', error);
-    return res.status(500).json({ success: false, error: 'Server error during registration' });
+    console.error('Register Error:', error.message);
+    return res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'Server error during registration' }
+    });
   }
 };
 
@@ -72,20 +95,27 @@ const login = async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ success: false, error: 'Please provide email and password' });
+    return res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: 'Please provide email and password' }
+    });
   }
 
   try {
-    // Find user — use lowercase email
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
-      return res.status(400).json({ success: false, error: 'Invalid credentials' });
+      return res.status(401).json({
+        success: false,
+        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' }
+      });
     }
 
-    // Compare password (bcrypt via User model method)
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(400).json({ success: false, error: 'Invalid credentials' });
+      return res.status(401).json({
+        success: false,
+        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' }
+      });
     }
 
     const token = generateToken(user);
@@ -101,8 +131,11 @@ const login = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Login Error:', error);
-    return res.status(500).json({ success: false, error: 'Server error during login' });
+    console.error('Login Error:', error.message);
+    return res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'Server error during login' }
+    });
   }
 };
 
@@ -113,12 +146,18 @@ const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
     if (!user) {
-      return res.status(404).json({ success: false, error: 'User not found' });
+      return res.status(404).json({
+        success: false,
+        error: { code: 'NOT_FOUND', message: 'User not found' }
+      });
     }
     return res.json({ success: true, data: user });
   } catch (error) {
-    console.error('GetMe Error:', error);
-    return res.status(500).json({ success: false, error: 'Server error' });
+    console.error('GetMe Error:', error.message);
+    return res.status(500).json({
+      success: false,
+      error: { code: 'SERVER_ERROR', message: 'Server error' }
+    });
   }
 };
 
