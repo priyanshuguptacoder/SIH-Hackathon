@@ -1,0 +1,21 @@
+{
+  "name": "sih-hackathon",
+  "version": "1.0.0",
+  "description": "An intelligent, MERN-based platform designed to streamline industrial approvals, regulatory compliance, document management, and access to government support services.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/priyanshuguptacoder/SIH-Hackathon.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/priyanshuguptacoder/SIH-Hackathon/issues"
+  },
+  "homepage": "https://github.com/priyanshuguptacoder/SIH-Hackathon#readme"
+}
