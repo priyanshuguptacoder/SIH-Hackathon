@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/api';
@@ -41,7 +41,7 @@ const AdminDashboard = () => {
     fetchApplicationsForReview();
   }, []);
 
-  const fetchDashboardData = async () => {
+  async function fetchDashboardData() {
     try {
       const { data: result } = await api.get('/admin/dashboard');
       setStats(result.data);
@@ -51,7 +51,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const fetchApplicationsForReview = async () => {
+  async function fetchApplicationsForReview() {
     try {
       const { data: result } = await api.get('/admin/applications');
       setApplications(result.data);

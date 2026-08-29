@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/api';
@@ -35,7 +35,7 @@ const AdminApplicationReview = () => {
     fetchApplicationDetails();
   }, [id]);
 
-  const fetchApplicationDetails = async () => {
+  async function fetchApplicationDetails() {
     try {
       setLoading(true);
       const { data: result } = await api.get(`/admin/applications/${id}`);
@@ -56,7 +56,7 @@ const AdminApplicationReview = () => {
 
     try {
       setActionLoading(true);
-      const { data: result } = await api.put(`/admin/applications/${id}/review`, {
+      await api.put(`/admin/applications/${id}/review`, {
         action,
         remarks
       });
