@@ -26,6 +26,8 @@ const seedDB = async () => {
     const cte = await Approval.create({
       approvalName:      'Consent to Establish (CTE)',
       authority:         'Maharashtra Pollution Control Board (MPCB)',
+      category:          'Environmental',
+      dependencies:      [],
       description:       'Required before any construction/civil work begins for industries listed under Water/Air Act.',
       requiredDocuments: ['Project Report', 'Site Plan', 'Water Balance Diagram', 'ETP Layout', 'NOC from Local Authority'],
       officialUrl:       'https://mpcb.gov.in/consent-establish',
@@ -37,6 +39,8 @@ const seedDB = async () => {
     const cto = await Approval.create({
       approvalName:      'Consent to Operate (CTO)',
       authority:         'Maharashtra Pollution Control Board (MPCB)',
+      category:          'Environmental',
+      dependencies:      ['Consent to Establish (CTE)'],
       description:       'Required before commencement of operations. Issued after CTE is obtained and construction complete.',
       requiredDocuments: ['CTE Certificate', 'Completion Certificate', 'ETP Commissioning Report', 'Stack Monitoring Report'],
       officialUrl:       'https://mpcb.gov.in/consent-operate',
@@ -48,6 +52,8 @@ const seedDB = async () => {
     const factoryLicense = await Approval.create({
       approvalName:      'Factory License',
       authority:         'Directorate of Industrial Safety and Health (DISH), Maharashtra',
+      category:          'Labour & Safety',
+      dependencies:      [],
       description:       'Mandatory for factories employing 10+ workers using power, or 20+ without power.',
       requiredDocuments: ['Plan of Premises', 'Stability Certificate', 'NOC from Fire Department', 'MSEB Connection Proof'],
       officialUrl:       'https://dish.maharashtra.gov.in',
@@ -59,6 +65,8 @@ const seedDB = async () => {
     const fireNoc = await Approval.create({
       approvalName:      'Fire NOC',
       authority:         'Maharashtra Fire and Emergency Services',
+      category:          'Fire & Emergency',
+      dependencies:      [],
       description:       'Required for industrial premises above specified investment or occupancy threshold.',
       requiredDocuments: ['Building Plan', 'Fire Safety Audit Report', 'Occupancy Certificate'],
       officialUrl:       'https://mahafire.gov.in',
@@ -70,6 +78,8 @@ const seedDB = async () => {
     const labourLicense = await Approval.create({
       approvalName:      'Labour License (Contract Labour)',
       authority:         'Labour Commissioner, Maharashtra',
+      category:          'Labour & Safety',
+      dependencies:      ['Factory License'],
       description:       'Required if employing contract workers (20 or more).',
       requiredDocuments: ['Form XII Application', 'List of Contractors', 'Principal Employer Registration Certificate'],
       officialUrl:       'https://labour.maharashtra.gov.in',
@@ -85,17 +95,17 @@ const seedDB = async () => {
       condition: {
         operator: 'AND',
         rules: [
-          { field: 'state',                operator: 'eq',  value: 'Maharashtra' },
-          { field: 'sector',               operator: 'eq',  value: 'Textiles' },
-          { field: 'generatesWastewater',  operator: 'eq',  value: true }
+          { field: 'state',               operator: 'eq', value: 'Maharashtra' },
+          { field: 'sector',              operator: 'eq', value: 'textiles' },
+          { field: 'generatesWastewater', operator: 'eq', value: true }
         ]
       },
       explanationTemplate: 'Required because your {sector} project in {state} generates industrial wastewater, which is regulated under the Water Act, 1974.',
-      priority:    1,
+      priority:      1,
       effectiveDate: new Date('2023-01-01'),
-      version:     '1.0',
-      isActive:    true,
-      source:      'MPCB General Guidelines 2023'
+      version:       '1.0',
+      isActive:      true,
+      source:        'MPCB General Guidelines 2023'
     });
 
     await RegulatoryRule.create({
@@ -104,18 +114,18 @@ const seedDB = async () => {
       condition: {
         operator: 'AND',
         rules: [
-          { field: 'state',               operator: 'eq',  value: 'Maharashtra' },
-          { field: 'sector',              operator: 'eq',  value: 'Textiles' },
-          { field: 'generatesWastewater', operator: 'eq',  value: true },
-          { field: 'projectStage',        operator: 'in',  value: ['pre-operation', 'operational'] }
+          { field: 'state',               operator: 'eq', value: 'Maharashtra' },
+          { field: 'sector',              operator: 'eq', value: 'textiles' },
+          { field: 'generatesWastewater', operator: 'eq', value: true },
+          { field: 'projectStage',        operator: 'in', value: ['pre-operation', 'operational'] }
         ]
       },
       explanationTemplate: 'Required before commencing operations. Your {sector} unit in {state} must obtain CTO after CTE and construction are complete.',
-      priority:    2,
+      priority:      2,
       effectiveDate: new Date('2023-01-01'),
-      version:     '1.0',
-      isActive:    true,
-      source:      'Water Act 1974, Section 25'
+      version:       '1.0',
+      isActive:      true,
+      source:        'Water Act 1974, Section 25'
     });
 
     await RegulatoryRule.create({
@@ -129,11 +139,11 @@ const seedDB = async () => {
         ]
       },
       explanationTemplate: 'Required under the Factories Act, 1948 because your unit will employ {employees} workers, which exceeds the threshold of 10 workers with power usage.',
-      priority:    3,
+      priority:      3,
       effectiveDate: new Date('2022-01-01'),
-      version:     '1.0',
-      isActive:    true,
-      source:      'Factories Act 1948, Section 6'
+      version:       '1.0',
+      isActive:      true,
+      source:        'Factories Act 1948, Section 6'
     });
 
     await RegulatoryRule.create({
@@ -143,15 +153,15 @@ const seedDB = async () => {
         operator: 'AND',
         rules: [
           { field: 'state',      operator: 'eq',  value: 'Maharashtra' },
-          { field: 'investment', operator: 'gte', value: 10000000 }  // >= 1 Crore
+          { field: 'investment', operator: 'gte', value: 100 }  // >= 100 Lakhs (1 Crore)
         ]
       },
-      explanationTemplate: 'Required because your investment of ₹{investment} in {state} meets the threshold for mandatory Fire NOC under the Maharashtra Fire Act.',
-      priority:    4,
+      explanationTemplate: 'Required because your investment of ₹{investment} Lakhs in {state} meets the threshold for mandatory Fire NOC under the Maharashtra Fire Act.',
+      priority:      4,
       effectiveDate: new Date('2022-01-01'),
-      version:     '1.0',
-      isActive:    true,
-      source:      'Maharashtra Fire Prevention Act, 2006'
+      version:       '1.0',
+      isActive:      true,
+      source:        'Maharashtra Fire Prevention Act, 2006'
     });
 
     await RegulatoryRule.create({
@@ -165,11 +175,11 @@ const seedDB = async () => {
         ]
       },
       explanationTemplate: 'Required because your unit employs {employees} workers (≥20), triggering Labour License requirements under the Contract Labour Act, 1970.',
-      priority:    5,
+      priority:      5,
       effectiveDate: new Date('2022-01-01'),
-      version:     '1.0',
-      isActive:    true,
-      source:      'Contract Labour (Regulation and Abolition) Act, 1970'
+      version:       '1.0',
+      isActive:      true,
+      source:        'Contract Labour (Regulation and Abolition) Act, 1970'
     });
 
     // ─── 3. Compliance Rules ──────────────────────────────────────────────────
@@ -218,13 +228,13 @@ const seedDB = async () => {
       schemeName:   'Maharashtra Textile Policy 2023-28 — Capital Subsidy',
       description:  'Capital investment subsidy for new and expanding textile manufacturing units in Maharashtra.',
       state:        'Maharashtra',
-      sector:       'Textiles',
+      sector:       'textiles',
       eligibilityCriteria: {
         operator: 'AND',
         rules: [
           { field: 'state',      operator: 'eq',  value: 'Maharashtra' },
-          { field: 'sector',     operator: 'eq',  value: 'Textiles' },
-          { field: 'investment', operator: 'gte', value: 10000000 }  // >= 1 Crore
+          { field: 'sector',     operator: 'eq',  value: 'textiles' },
+          { field: 'investment', operator: 'gte', value: 100 }  // >= 100 Lakhs (1 Crore)
         ]
       },
       benefits:    'Up to 30% capital subsidy on eligible plant and machinery (max ₹5 Crore).',
@@ -235,12 +245,12 @@ const seedDB = async () => {
       schemeName:   'MSME Cluster Development Programme',
       description:  'Central government scheme to support development of MSME clusters including textile units.',
       state:        'Maharashtra',
-      sector:       'Textiles',
+      sector:       'textiles',
       eligibilityCriteria: {
         operator: 'AND',
         rules: [
-          { field: 'sector',     operator: 'eq',  value: 'Textiles' },
-          { field: 'investment', operator: 'between', value: [1000000, 100000000] }  // 10L to 10Cr
+          { field: 'sector',     operator: 'eq',      value: 'textiles' },
+          { field: 'investment', operator: 'between', value: [10, 1000] }  // 10L to 1000L (10Cr)
         ]
       },
       benefits:    'Infrastructure support, common facility centres, and skill development grants.',
