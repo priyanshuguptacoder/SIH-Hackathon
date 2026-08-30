@@ -870,7 +870,7 @@ function StepFour({ form, updateField, submitted, resetWizard, existingId, navig
 
         <button
           type="button"
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate("/analyze")}
           className="mx-auto flex items-center gap-2 rounded-lg bg-[#4f378a] px-8 py-3 font-bold text-white shadow-sm hover:bg-[#6750a4]"
         >
           <BarChart3 size={18} />

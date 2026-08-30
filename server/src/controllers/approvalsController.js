@@ -83,9 +83,27 @@ const getApprovalRoadmap = async (req, res) => {
     const appMap = {};
     applications.forEach(app => { appMap[app.approvalId.toString()] = app; });
 
+    // Build set of applicable approval names for dependency resolution
+    const applicableNames = new Set(applicable.map(r => r.approvalId.approvalName));
+
     const roadmap = applicable.map(rule => {
-      const appIdStr = rule.approvalId._id.toString();
+      const appIdStr    = rule.approvalId._id.toString();
       const existingApp = appMap[appIdStr];
+
+      // Resolve which dependencies are also in the roadmap
+      const deps = (rule.approvalId.dependencies || []).map(depName => ({
+        name:         depName,
+        inRoadmap:    applicableNames.has(depName),
+        // Check if that dependency is approved
+        isObtained:   (() => {
+          const depRule = applicable.find(r => r.approvalId.approvalName === depName);
+          if (!depRule) return false;
+          const depApp = appMap[depRule.approvalId._id.toString()];
+          return depApp?.status === 'APPROVED';
+        })()
+      }));
+
+      const pendingDeps = deps.filter(d => d.inRoadmap && !d.isObtained);
 
       return {
         approval: {
@@ -93,9 +111,12 @@ const getApprovalRoadmap = async (req, res) => {
           name:              rule.approvalId.approvalName,
           authority:         rule.approvalId.authority,
           description:       rule.approvalId.description,
+          category:          rule.approvalId.category || 'General',
           requiredDocuments: rule.approvalId.requiredDocuments,
           officialUrl:       rule.approvalId.officialUrl,
-          legalBasis:        rule.approvalId.legalBasis
+          legalBasis:        rule.approvalId.legalBasis,
+          slaDays:           rule.approvalId.slaDays,
+          dependencies:      deps,
         },
         rule: {
           id:       rule.ruleId,
@@ -104,7 +125,8 @@ const getApprovalRoadmap = async (req, res) => {
           source:   rule.source || rule.version
         },
         applicationStatus: existingApp ? existingApp.status : 'NOT_STARTED',
-        applicationId:     existingApp ? existingApp._id : null
+        applicationId:     existingApp ? existingApp._id : null,
+        blockedBy:         pendingDeps.map(d => d.name),
       };
     });
 
