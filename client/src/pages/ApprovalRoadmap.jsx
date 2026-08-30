@@ -282,7 +282,8 @@ function CategoryHeader({ category, count }) {
 }
 
 // ── Single approval row card ───────────────────────────────────────────────
-function ApprovalCard({ item, index, onSelect, onApply, applying }) {
+function ApprovalCard({ item, index, onSelect, onApply, applying, industryId }) {
+  const navigate = useNavigate();
   const { approval, rule, applicationStatus, blockedBy } = item;
   const catCfg     = CATEGORY_CONFIG[approval.category] || CATEGORY_CONFIG["General"];
   const isApproved = applicationStatus === "APPROVED";
@@ -298,7 +299,7 @@ function ApprovalCard({ item, index, onSelect, onApply, applying }) {
           ? "border-orange-100 bg-orange-50/40 hover:border-orange-200"
           : "border-[#cbc4d2] bg-white hover:border-[#4f378a] hover:shadow-sm"
         }`}
-      onClick={() => onSelect(item)}
+      onClick={() => navigate(`/approval/${approval.id}/detail?industryId=${industryId}`)}
     >
       <div className="flex items-center gap-4 p-4">
         {/* Priority number */}
@@ -647,6 +648,7 @@ export default function ApprovalRoadmap() {
                         onSelect={setSelected}
                         onApply={handleApply}
                         applying={applying}
+                        industryId={industryId}
                       />
                     ))}
                   </div>
