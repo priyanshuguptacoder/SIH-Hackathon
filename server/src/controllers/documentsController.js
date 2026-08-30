@@ -44,14 +44,14 @@ const uploadDocument = async (req, res) => {
 // @access  Protected
 const getDocuments = async (req, res) => {
   try {
-    // For MVP, fetch by user's industry
     const industry = await Industry.findOne({ userId: req.user.id });
     if (!industry && req.user.role !== 'Admin') {
-      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Industry profile not found' } });
+      // No industry profile yet — return empty array
+      return res.json({ success: true, data: [] });
     }
 
     let query = req.user.role === 'Admin' ? {} : { industryId: industry._id };
-    
+
     if (req.query.approvalId) {
       query.approvalId = req.query.approvalId;
     }
