@@ -9,6 +9,7 @@ import Wizard from './pages/Wizard';
 import Analysis from './pages/Analysis';
 import ApprovalRoadmap from './pages/ApprovalRoadmap';
 import ApprovalDetail from './pages/ApprovalDetail';
+import Documents from './pages/Documents';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminApplicationReview from './pages/AdminApplicationReview';
 
@@ -23,11 +24,12 @@ const App = () => {
           <Route path="/register" element={<Register />} />
 
           {/* Industry routes */}
-          <Route path="/dashboard"                    element={<ProtectedRoute allowedRoles={['Industry']}><Dashboard /></ProtectedRoute>} />
-          <Route path="/wizard"                       element={<ProtectedRoute allowedRoles={['Industry']}><Wizard /></ProtectedRoute>} />
-          <Route path="/analyze"                      element={<ProtectedRoute allowedRoles={['Industry']}><Analysis /></ProtectedRoute>} />
-          <Route path="/roadmap/:industryId"          element={<ProtectedRoute allowedRoles={['Industry']}><ApprovalRoadmap /></ProtectedRoute>} />
-          <Route path="/approval/:approvalId/detail"  element={<ProtectedRoute allowedRoles={['Industry']}><ApprovalDetail /></ProtectedRoute>} />
+          <Route path="/dashboard"                   element={<ProtectedRoute allowedRoles={['Industry']}><Dashboard /></ProtectedRoute>} />
+          <Route path="/wizard"                      element={<ProtectedRoute allowedRoles={['Industry']}><Wizard /></ProtectedRoute>} />
+          <Route path="/analyze"                     element={<ProtectedRoute allowedRoles={['Industry']}><Analysis /></ProtectedRoute>} />
+          <Route path="/roadmap/:industryId"         element={<ProtectedRoute allowedRoles={['Industry']}><ApprovalRoadmap /></ProtectedRoute>} />
+          <Route path="/approval/:approvalId/detail" element={<ProtectedRoute allowedRoles={['Industry']}><ApprovalDetail /></ProtectedRoute>} />
+          <Route path="/documents"                   element={<ProtectedRoute allowedRoles={['Industry']}><Documents /></ProtectedRoute>} />
 
           {/* Admin routes */}
           <Route path="/admin/dashboard"        element={<ProtectedRoute allowedRoles={['Admin']}><AdminDashboard /></ProtectedRoute>} />
