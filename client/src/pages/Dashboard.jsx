@@ -217,6 +217,11 @@ const Dashboard = () => {
                 key={item.label}
                 type="button"
                 onClick={() => {
+                  // Documents has its own page
+                  if (item.section === "Documents") {
+                    navigate("/documents");
+                    return;
+                  }
                   setActiveSection(item.section);
                   // scroll to anchor if it exists on page
                   const el = document.getElementById(`section-${item.section}`);
