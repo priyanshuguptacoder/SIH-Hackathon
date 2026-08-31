@@ -217,9 +217,13 @@ const Dashboard = () => {
                 key={item.label}
                 type="button"
                 onClick={() => {
-                  // Documents has its own page
+                  // Documents and Applications have their own pages
                   if (item.section === "Documents") {
                     navigate("/documents");
+                    return;
+                  }
+                  if (item.section === "Approvals") {
+                    navigate("/applications");
                     return;
                   }
                   setActiveSection(item.section);

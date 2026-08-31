@@ -10,6 +10,7 @@ import Analysis from './pages/Analysis';
 import ApprovalRoadmap from './pages/ApprovalRoadmap';
 import ApprovalDetail from './pages/ApprovalDetail';
 import Documents from './pages/Documents';
+import ApplicationTracking from './pages/ApplicationTracking';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminApplicationReview from './pages/AdminApplicationReview';
 
@@ -30,6 +31,7 @@ const App = () => {
           <Route path="/roadmap/:industryId"         element={<ProtectedRoute allowedRoles={['Industry']}><ApprovalRoadmap /></ProtectedRoute>} />
           <Route path="/approval/:approvalId/detail" element={<ProtectedRoute allowedRoles={['Industry']}><ApprovalDetail /></ProtectedRoute>} />
           <Route path="/documents"                   element={<ProtectedRoute allowedRoles={['Industry']}><Documents /></ProtectedRoute>} />
+          <Route path="/applications"                element={<ProtectedRoute allowedRoles={['Industry']}><ApplicationTracking /></ProtectedRoute>} />
 
           {/* Admin routes */}
           <Route path="/admin/dashboard"        element={<ProtectedRoute allowedRoles={['Admin']}><AdminDashboard /></ProtectedRoute>} />
