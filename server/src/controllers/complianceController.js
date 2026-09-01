@@ -92,11 +92,11 @@ const getComplianceItem = async (req, res) => {
 };
 
 // @route   PUT /compliance/:id
-// @desc    Update compliance status with validated transitions
+// @desc    Update compliance status with validated transitions + optional proof/notes
 // @access  Protected
 const updateComplianceItem = async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, notes, proofUrl } = req.body;
 
     if (!status) {
       return res.status(400).json({
@@ -134,6 +134,10 @@ const updateComplianceItem = async (req, res) => {
     }
 
     item.status = status;
+    if (notes    !== undefined) item.notes    = notes;
+    if (proofUrl !== undefined) item.proofUrl = proofUrl;
+    if (status === 'COMPLETED') item.completedAt = new Date();
+
     await item.save();
 
     // For recurring items completed: generate the next UPCOMING item

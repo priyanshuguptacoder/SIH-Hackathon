@@ -2,21 +2,24 @@ const mongoose = require('mongoose');
 
 const complianceItemSchema = new mongoose.Schema(
   {
-    industryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Industry', required: true, index: true },
-    approvalId: { type: mongoose.Schema.Types.ObjectId, ref: 'Approval', required: true },
+    industryId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Industry', required: true, index: true },
+    approvalId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Approval', required: true },
     requirementText: { type: String, required: true },
-    recurrence: { 
-      type: String, 
-      enum: ['ONE_TIME', 'MONTHLY', 'QUARTERLY', 'ANNUAL', 'RENEWAL'], 
-      required: true 
+    recurrence: {
+      type: String,
+      enum: ['ONE_TIME', 'MONTHLY', 'QUARTERLY', 'ANNUAL', 'RENEWAL'],
+      required: true
     },
-    status: { 
-      type: String, 
-      enum: ['UPCOMING', 'DUE', 'OVERDUE', 'COMPLETED'], 
-      default: 'UPCOMING' 
+    status: {
+      type: String,
+      enum: ['UPCOMING', 'DUE', 'OVERDUE', 'COMPLETED'],
+      default: 'UPCOMING'
     },
-    dueDate: { type: Date, required: true },
-    source: { type: String }
+    dueDate:   { type: Date, required: true },
+    source:    { type: String },
+    proofUrl:  { type: String, default: '' },     // uploaded proof of compliance
+    completedAt: { type: Date },                  // when marked completed
+    notes:     { type: String, default: '' },     // optional notes on completion
   },
   { timestamps: true }
 );
