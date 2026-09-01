@@ -7,6 +7,12 @@ const Application = require('../models/Application');
 const User = require('../models/User');
 const Industry = require('../models/Industry');
 const Document = require('../models/Document');
+const fs = require('fs');
+const path = require('path');
+
+// Lazy-load RegulationChunk so the server starts even if the model doesn't exist yet
+let RegulationChunk;
+try { RegulationChunk = require('../models/RegulationChunk'); } catch { RegulationChunk = null; }
 
 // ─── Approvals ────────────────────────────────────────────────────────────────
 
@@ -103,10 +109,128 @@ const createScheme = async (req, res) => {
   }
 };
 
+const updateScheme = async (req, res) => {
+  try {
+    const scheme = await Scheme.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true, runValidators: true });
+    if (!scheme) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Scheme not found' } });
+    return res.json({ success: true, data: scheme });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: err.message } });
+  }
+};
+
+const deleteScheme = async (req, res) => {
+  try {
+    await Scheme.findByIdAndDelete(req.params.id);
+    return res.json({ success: true, data: { message: 'Scheme deleted' } });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: err.message } });
+  }
+};
+
 const listSchemes = async (req, res) => {
   try {
     const schemes = await Scheme.find({});
     return res.json({ success: true, data: schemes });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: err.message } });
+  }
+};
+
+// ─── Regulations (RAG upload) ─────────────────────────────────────────────────
+
+const uploadRegulation = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'No file uploaded' } });
+    }
+    const { title, authority, effectiveDate, version, state, sector } = req.body;
+    if (!title || !authority) {
+      return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'title and authority are required' } });
+    }
+
+    const fileUrl = `/uploads/${req.file.filename}`;
+
+    // Store metadata as a Document record (documentType = 'REGULATION')
+    const doc = await Document.create({
+      industryId: null,     // admin-level doc — no industry
+      approvalId: null,
+      documentType: 'REGULATION',
+      fileUrl,
+      originalName: req.file.originalname,
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype,
+      tags: ['Regulation', authority, state, sector].filter(Boolean),
+      extractionStatus: 'PENDING',
+    });
+
+    // In a full implementation you would trigger async PDF chunking + embedding here.
+    // For the prototype we record metadata and mark as PROCESSING.
+    await Document.findByIdAndUpdate(doc._id, { extractionStatus: 'PROCESSING' });
+
+    AuditLog.record({
+      userId: req.user.id,
+      action: 'REGULATION_UPLOADED',
+      targetModel: 'Document',
+      targetId: doc._id,
+      newValue: { title, authority, version }
+    });
+
+    // Simulate async ingestion (fires & forgets)
+    setTimeout(async () => {
+      try {
+        await Document.findByIdAndUpdate(doc._id, {
+          extractionStatus: 'DONE',
+          'extractedData.raw': `Regulation "${title}" ingested. Chunking & embedding pending RAG pipeline.`,
+        });
+      } catch { /* ignore */ }
+    }, 3000);
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        id: doc._id,
+        title, authority, effectiveDate, version, state, sector,
+        fileUrl,
+        status: 'PROCESSING',
+        message: 'Regulation uploaded. Chunking & ingestion started.'
+      }
+    });
+  } catch (err) {
+    console.error('Upload Regulation Error:', err);
+    return res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: err.message } });
+  }
+};
+
+const listRegulations = async (req, res) => {
+  try {
+    const docs = await Document.find({ documentType: 'REGULATION' }).sort({ createdAt: -1 });
+    return res.json({ success: true, data: docs });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: err.message } });
+  }
+};
+
+const deleteRegulation = async (req, res) => {
+  try {
+    const doc = await Document.findById(req.params.id);
+    if (!doc) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Regulation not found' } });
+    const filePath = path.join(__dirname, '../../', doc.fileUrl);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    await Document.findByIdAndDelete(req.params.id);
+    return res.json({ success: true, data: { message: 'Regulation deleted' } });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: err.message } });
+  }
+};
+
+// ─── Knowledge Base (RegulationChunk) ────────────────────────────────────────
+
+const listKnowledgeBase = async (req, res) => {
+  try {
+    if (!RegulationChunk) return res.json({ success: true, data: [] });
+    const chunks = await RegulationChunk.find({}).select('-embedding').sort({ createdAt: -1 }).limit(200);
+    return res.json({ success: true, data: chunks });
   } catch (err) {
     return res.status(500).json({ success: false, error: { code: 'SERVER_ERROR', message: err.message } });
   }
@@ -175,12 +299,13 @@ const getApplicationsForReview = async (req, res) => {
     const { status } = req.query;
 
     const filter = {};
-    if (status) {
+    if (status && status !== 'ALL') {
       filter.status = status;
-    } else {
+    } else if (!status) {
       // Default: Show applications that need Admin/Authority attention
       filter.status = { $in: ['SUBMITTED', 'UNDER_REVIEW', 'INSPECTION'] };
     }
+    // if status === 'ALL', filter stays empty → return everything
 
     const applications = await Application.find(filter)
       .populate('industryId')
@@ -317,7 +442,9 @@ module.exports = {
   createApproval, updateApproval, listApprovals,
   createRule, updateRule, listRules,
   createComplianceRule, listComplianceRules,
-  createScheme, listSchemes,
+  createScheme, updateScheme, deleteScheme, listSchemes,
+  uploadRegulation, listRegulations, deleteRegulation,
+  listKnowledgeBase,
   getDashboardStats,
   getAuditLogs,
   getApplicationsForReview,
