@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -25,6 +25,13 @@ import {
   ExternalLink,
   X,
   MessageSquare,
+  Send,
+  Loader2,
+  BookOpen,
+  CheckCheck,
+  Flame,
+  CalendarClock,
+  ScanSearch,
 } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
@@ -35,14 +42,27 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   // ── panel / section state ──────────────────────────────────────────────────
-  const [activeSection, setActiveSection]   = useState("Dashboard");
-  const [showAllApps, setShowAllApps]       = useState(false);
+  const [activeSection, setActiveSection]         = useState("Dashboard");
+  const [showAllApps, setShowAllApps]             = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showProfile, setShowProfile]       = useState(false);
-  const [showAIChat, setShowAIChat]         = useState(false);
-  const [aiInput, setAiInput]               = useState("");
-  const notifRef  = useRef(null);
+  const [showProfile, setShowProfile]             = useState(false);
+  const [showAIChat, setShowAIChat]               = useState(false);
+  const [aiInput, setAiInput]                     = useState("");
+  const notifRef   = useRef(null);
   const profileRef = useRef(null);
+
+  // ── notifications state ────────────────────────────────────────────────────
+  const [notifications, setNotifications]   = useState([]);
+  const [notifsLoaded, setNotifsLoaded]     = useState(false);
+
+  // ── AI chat state ──────────────────────────────────────────────────────────
+  const [aiMessages, setAiMessages]   = useState([
+    { role: "assistant", text: "Hi! I'm your regulatory compliance assistant. Ask me about approvals, compliance obligations, or government schemes for your industry.", citations: [] }
+  ]);
+  const [aiTyping, setAiTyping]       = useState(false);
+  const [aiError, setAiError]         = useState("");
+  const aiBottomRef  = useRef(null);
+  const aiInputRef   = useRef(null);
 
   // ── state ──────────────────────────────────────────────────────────────────
   const [industry, setIndustry]           = useState(null);
@@ -60,6 +80,64 @@ const Dashboard = () => {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  // ── load notifications on bell open ───────────────────────────────────────
+  const loadNotifications = useCallback(async () => {
+    try {
+      const res = await api.get("/notifications");
+      if (res.data?.success) setNotifications(res.data.data || []);
+    } catch { /* silent */ }
+    setNotifsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (showNotifications && !notifsLoaded) loadNotifications();
+  }, [showNotifications, notifsLoaded, loadNotifications]);
+
+  const handleMarkRead = async (id) => {
+    try {
+      await api.put(`/notifications/${id}/read`);
+      setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
+    } catch { /* silent */ }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await api.put("/notifications/read-all");
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    } catch { /* silent */ }
+  };
+
+  // ── AI chat handler ────────────────────────────────────────────────────────
+  const handleAiSend = async () => {
+    const text = aiInput.trim();
+    if (!text || aiTyping) return;
+    setAiInput("");
+    setAiError("");
+    setAiMessages(prev => [...prev, { role: "user", text }]);
+    setAiTyping(true);
+    try {
+      const res = await api.post("/ai/chat", {
+        message: text,
+        industryId: industry?._id || null,
+      });
+      const { response, citations } = res.data?.data || {};
+      setAiMessages(prev => [
+        ...prev,
+        { role: "assistant", text: response || "No response received.", citations: citations || [] }
+      ]);
+    } catch (err) {
+      const msg = err.response?.data?.error?.message || err.response?.data?.error || "Failed to get a response. Please try again.";
+      setAiError(typeof msg === "string" ? msg : "An error occurred.");
+    } finally {
+      setAiTyping(false);
+    }
+  };
+
+  // Scroll AI chat to bottom on new messages
+  useEffect(() => {
+    if (showAIChat) aiBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [aiMessages, aiTyping, showAIChat]);
 
 
 
@@ -303,28 +381,90 @@ const Dashboard = () => {
                 aria-label="Toggle notifications"
                 aria-expanded={showNotifications}
                 onClick={() => { setShowNotifications(v => !v); setShowProfile(false); }}
-                className="w-10 h-10 rounded-full flex items-center justify-center text-[#494551] hover:bg-[#f2ecf4] transition-colors"
+                className="relative w-10 h-10 rounded-full flex items-center justify-center text-[#494551] hover:bg-[#f2ecf4] transition-colors"
               >
                 <Bell size={20} />
+                {notifications.filter(n => !n.isRead).length > 0 && (
+                  <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                    {notifications.filter(n => !n.isRead).length > 9 ? "9+" : notifications.filter(n => !n.isRead).length}
+                  </span>
+                )}
               </button>
+
               {showNotifications && (
-                <div className="absolute right-0 top-12 w-80 bg-white border border-[#cbc4d2] rounded-xl shadow-xl z-50 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-[#cbc4d2] flex items-center justify-between">
-                    <span className="font-semibold text-[#1d1b20]">Notifications</span>
-                    <button onClick={() => setShowNotifications(false)}><X size={16} className="text-[#7a7582]" /></button>
+                <div className="absolute right-0 top-12 w-96 bg-white border border-[#cbc4d2] rounded-2xl shadow-2xl z-50 overflow-hidden">
+                  {/* Header */}
+                  <div className="flex items-center justify-between border-b border-[#e6e0e9] bg-[#f8f2fa] px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Bell size={15} className="text-[#4f378a]" />
+                      <span className="font-bold text-[#1d1b20]">Notifications</span>
+                      {notifications.filter(n => !n.isRead).length > 0 && (
+                        <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                          {notifications.filter(n => !n.isRead).length} new
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {notifications.some(n => !n.isRead) && (
+                        <button
+                          type="button"
+                          onClick={handleMarkAllRead}
+                          className="flex items-center gap-1 text-xs font-semibold text-[#4f378a] hover:underline"
+                        >
+                          <CheckCheck size={13} /> Mark all read
+                        </button>
+                      )}
+                      <button type="button" onClick={() => setShowNotifications(false)}>
+                        <X size={16} className="text-[#7a7582]" />
+                      </button>
+                    </div>
                   </div>
-                  {compliance.filter(c => c.status === "UPCOMING").length === 0 ? (
-                    <div className="px-4 py-6 text-sm text-[#7a7582] text-center">No new notifications</div>
+
+                  {/* List */}
+                  {!notifsLoaded ? (
+                    <div className="flex items-center justify-center py-8 gap-2 text-sm text-[#7a7582]">
+                      <Loader2 size={16} className="animate-spin" /> Loading…
+                    </div>
+                  ) : notifications.length === 0 ? (
+                    <div className="flex flex-col items-center gap-2 py-10 text-center">
+                      <Bell size={28} className="text-[#cbc4d2]" />
+                      <p className="text-sm font-semibold text-[#1d1b20]">No notifications</p>
+                      <p className="text-xs text-[#7a7582]">You're all caught up</p>
+                    </div>
                   ) : (
-                    <div className="max-h-72 overflow-y-auto divide-y divide-[#cbc4d2]">
-                      {compliance.filter(c => c.status === "UPCOMING").slice(0, 5).map(item => (
-                        <div key={item._id} className="px-4 py-3">
-                          <p className="text-sm font-semibold text-[#1d1b20]">{item.requirementText}</p>
-                          <p className="text-xs text-[#ba1a1a] mt-0.5">
-                            Due {new Date(item.dueDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                          </p>
-                        </div>
-                      ))}
+                    <div className="max-h-80 overflow-y-auto divide-y divide-[#e6e0e9]">
+                      {notifications.map(n => {
+                        const typeIcon = {
+                          DEADLINE:       <CalendarClock size={14} className="text-orange-500" />,
+                          RENEWAL:        <Clock3 size={14} className="text-blue-500" />,
+                          SLA_WARNING:    <AlertTriangle size={14} className="text-yellow-500" />,
+                          SLA_BREACH:     <Flame size={14} className="text-red-500" />,
+                          DOCUMENT_EXPIRY:<FileText size={14} className="text-purple-500" />,
+                          GENERAL:        <Bell size={14} className="text-[#4f378a]" />,
+                        }[n.type] || <Bell size={14} className="text-[#4f378a]" />;
+
+                        return (
+                          <div
+                            key={n._id}
+                            onClick={() => handleMarkRead(n._id)}
+                            className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-[#f8f2fa] ${!n.isRead ? "bg-[#fdf7ff]" : ""}`}
+                          >
+                            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${!n.isRead ? "bg-[#f0ebff]" : "bg-[#f2f2f2]"}`}>
+                              {typeIcon}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm leading-tight ${!n.isRead ? "font-bold text-[#1d1b20]" : "font-medium text-[#494551]"}`}>
+                                {n.title}
+                              </p>
+                              <p className="mt-0.5 text-xs text-[#7a7582] leading-relaxed">{n.message}</p>
+                              <p className="mt-1 text-[10px] text-[#7a7582]">
+                                {new Date(n.createdAt).toLocaleDateString("en-IN", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" })}
+                              </p>
+                            </div>
+                            {!n.isRead && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#4f378a]" />}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -688,47 +828,132 @@ const Dashboard = () => {
       </div>
 
       {/* ================= AI ASSISTANT ================= */}
+      {/* FAB */}
       <button
         type="button"
-        onClick={() => setShowAIChat(v => !v)}
+        onClick={() => { setShowAIChat(v => !v); setAiError(""); }}
         className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-[#6750a4] text-white rounded-full shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
       >
-        <Bot size={24} />
+        <Bot size={22} />
         <span className="text-xs tracking-wide font-bold hidden sm:inline">AI Assistant</span>
       </button>
 
-      {/* AI Chat Panel */}
+      {/* Chat panel */}
       {showAIChat && (
-        <div className="fixed bottom-20 right-6 z-50 w-80 bg-white border border-[#cbc4d2] rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-          <div className="px-4 py-3 bg-[#4f378a] flex items-center justify-between">
+        <div className="fixed bottom-20 right-6 z-50 flex w-[360px] flex-col rounded-2xl border border-[#cbc4d2] bg-white shadow-2xl overflow-hidden"
+          style={{ height: "520px" }}>
+
+          {/* Panel header */}
+          <div className="flex items-center justify-between bg-[#4f378a] px-4 py-3">
             <div className="flex items-center gap-2">
-              <Bot size={18} className="text-white" />
-              <span className="text-white font-semibold text-sm">AI Assistant</span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
+                <Bot size={17} className="text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white leading-tight">Compliance AI</p>
+                <p className="text-[10px] text-white/70">Powered by verified regulatory sources</p>
+              </div>
             </div>
-            <button onClick={() => setShowAIChat(false)}><X size={16} className="text-white/70 hover:text-white" /></button>
-          </div>
-          <div className="px-4 py-6 flex flex-col items-center gap-3 text-center">
-            <div className="w-12 h-12 rounded-full bg-[#e1d4fd] flex items-center justify-center">
-              <Bot size={24} className="text-[#4f378a]" />
-            </div>
-            <p className="text-sm font-semibold text-[#1d1b20]">AI Assistant</p>
-            <p className="text-xs text-[#7a7582]">Ask me about regulatory compliance, approvals, and required documents for your industry.</p>
-          </div>
-          <div className="px-4 pb-4 flex gap-2">
-            <input
-              type="text"
-              value={aiInput}
-              onChange={e => setAiInput(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && aiInput.trim()) { window.open(`mailto:support@bharatcompliance.gov.in?subject=AI Query&body=${encodeURIComponent(aiInput)}`); setAiInput(""); }}}
-              placeholder="Ask a compliance question..."
-              className="flex-1 text-sm px-3 py-2 border border-[#cbc4d2] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#4f378a]"
-            />
-            <button
-              onClick={() => { if (aiInput.trim()) { window.open(`mailto:support@bharatcompliance.gov.in?subject=AI Query&body=${encodeURIComponent(aiInput)}`); setAiInput(""); }}}
-              className="px-3 py-2 bg-[#4f378a] text-white rounded-lg hover:bg-[#6750a4] transition-colors"
-            >
-              <MessageSquare size={16} />
+            <button type="button" onClick={() => setShowAIChat(false)}>
+              <X size={17} className="text-white/70 hover:text-white" />
             </button>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#fdf7ff]">
+            {aiMessages.map((msg, i) => (
+              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                {msg.role === "assistant" && (
+                  <div className="mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4f378a]">
+                    <Bot size={13} className="text-white" />
+                  </div>
+                )}
+                <div className={`max-w-[80%] space-y-2 ${msg.role === "user" ? "" : ""}`}>
+                  <div className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                    msg.role === "user"
+                      ? "rounded-tr-sm bg-[#4f378a] text-white"
+                      : "rounded-tl-sm bg-white border border-[#e6e0e9] text-[#1d1b20]"
+                  }`}>
+                    {msg.text}
+                  </div>
+
+                  {/* Citations */}
+                  {msg.citations?.length > 0 && (
+                    <div className="space-y-1 pl-1">
+                      <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#7a7582]">
+                        <BookOpen size={10} /> Sources
+                      </p>
+                      {msg.citations.map((c, ci) => (
+                        <div key={ci} className="rounded-lg border border-[#e6e0e9] bg-white px-3 py-2 text-xs text-[#494551]">
+                          <p className="font-semibold text-[#1d1b20]">{c.documentTitle}</p>
+                          {c.section && <p className="text-[#7a7582]">{c.section}{c.page ? ` · p.${c.page}` : ""}</p>}
+                          {c.score && (
+                            <p className="mt-0.5 text-[#4f378a] font-semibold">
+                              Relevance: {Math.round(c.score * 100)}%
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {/* Typing indicator */}
+            {aiTyping && (
+              <div className="flex justify-start">
+                <div className="mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#4f378a]">
+                  <Bot size={13} className="text-white" />
+                </div>
+                <div className="rounded-2xl rounded-tl-sm border border-[#e6e0e9] bg-white px-4 py-3">
+                  <div className="flex items-center gap-2 text-xs text-[#7a7582]">
+                    <ScanSearch size={13} className="animate-pulse text-[#4f378a]" />
+                    <span className="animate-pulse">Searching regulatory sources…</span>
+                  </div>
+                  <div className="mt-1.5 flex gap-1">
+                    {[0,1,2].map(d => (
+                      <span key={d} className="h-1.5 w-1.5 rounded-full bg-[#4f378a] animate-bounce"
+                        style={{ animationDelay: `${d * 150}ms` }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Error */}
+            {aiError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">{aiError}</div>
+            )}
+
+            <div ref={aiBottomRef} />
+          </div>
+
+          {/* Input */}
+          <div className="border-t border-[#e6e0e9] bg-white px-3 py-3">
+            <div className="flex items-center gap-2 rounded-xl border border-[#cbc4d2] bg-[#fdf7ff] px-3 py-2 focus-within:border-[#4f378a] focus-within:ring-2 focus-within:ring-[#cfbcff]">
+              <input
+                ref={aiInputRef}
+                type="text"
+                value={aiInput}
+                onChange={e => setAiInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAiSend(); } }}
+                placeholder="Ask about approvals, compliance…"
+                disabled={aiTyping}
+                className="flex-1 bg-transparent text-sm text-[#1d1b20] outline-none placeholder:text-[#7a7582] disabled:opacity-60"
+              />
+              <button
+                type="button"
+                onClick={handleAiSend}
+                disabled={!aiInput.trim() || aiTyping}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#4f378a] text-white hover:bg-[#6750a4] disabled:opacity-40 transition-colors"
+              >
+                {aiTyping ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+              </button>
+            </div>
+            <p className="mt-1.5 text-center text-[10px] text-[#7a7582]">
+              Answers sourced from verified regulatory documents
+            </p>
           </div>
         </div>
       )}
