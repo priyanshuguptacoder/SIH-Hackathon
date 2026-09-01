@@ -255,13 +255,14 @@ const Dashboard = () => {
 
   // ── nav ────────────────────────────────────────────────────────────────────
   const navItems = [
-    { label: "Dashboard",          icon: LayoutDashboard, section: "Dashboard"  },
-    { label: "My Approvals",       icon: ClipboardCheck,  section: "Approvals"  },
-    { label: "Compliance Tracker", icon: BarChart3,       section: "Compliance" },
-    { label: "Documents",          icon: FileText,        section: "Documents"  },
-    { label: "Schemes",            icon: Landmark,        section: "Schemes"    },
-    { label: "Industry Hub",       icon: Building2,       section: "Hub"        },
-    { label: "Settings",           icon: Settings,        section: "Settings"   },
+    { label: "Dashboard",          icon: LayoutDashboard, section: "Dashboard"   },
+    { label: "My Approvals",       icon: ClipboardCheck,  section: "Approvals"   },
+    { label: "Compliance Tracker", icon: BarChart3,       section: "Compliance"  },
+    { label: "Documents",          icon: FileText,        section: "Documents"   },
+    { label: "Schemes",            icon: Landmark,        section: "Schemes"     },
+    { label: "Industry Hub",       icon: Building2,       section: "Hub"         },
+    { label: "Inspections",        icon: ScanSearch,      section: "Inspections" },
+    { label: "Settings",           icon: Settings,        section: "Settings"    },
   ];
 
   if (loading) {
@@ -315,6 +316,10 @@ const Dashboard = () => {
                   }
                   if (item.section === "Hub") {
                     navigate("/hub");
+                    return;
+                  }
+                  if (item.section === "Inspections") {
+                    navigate("/inspections");
                     return;
                   }
                   setActiveSection(item.section);

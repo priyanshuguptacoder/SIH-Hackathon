@@ -14,6 +14,7 @@ import ApplicationTracking from './pages/ApplicationTracking';
 import ComplianceDashboard from './pages/ComplianceDashboard';
 import ComplianceDetail from './pages/ComplianceDetail';
 import IndustryHub from './pages/IndustryHub';
+import Inspections from './pages/Inspections';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminApplicationReview from './pages/AdminApplicationReview';
 import AdminApplicationsList from './pages/AdminApplicationsList';
@@ -47,6 +48,7 @@ const App = () => {
           <Route path="/compliance"                  element={<I><ComplianceDashboard /></I>} />
           <Route path="/compliance/:id"              element={<I><ComplianceDetail /></I>} />
           <Route path="/hub"                         element={<I><IndustryHub /></I>} />
+          <Route path="/inspections"                 element={<I><Inspections /></I>} />
 
           {/* Admin */}
           <Route path="/admin/dashboard"        element={<A><AdminDashboard /></A>} />

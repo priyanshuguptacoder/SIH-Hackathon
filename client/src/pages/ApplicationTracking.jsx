@@ -477,6 +477,13 @@ function DetailPanel({ app, onClose, onUpdate, industryId }) {
               Update Status
             </button>
           )}
+          {app.status === "INSPECTION" && (
+            <button type="button"
+              onClick={() => navigate("/inspections")}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-sm font-semibold text-orange-700 hover:bg-orange-100">
+              <CalendarClock size={15} /> Schedule / View Inspections
+            </button>
+          )}
           {approval._id && industryId && (
             <button type="button"
               onClick={() => navigate(`/approval/${approval._id}/detail?industryId=${industryId}`)}
