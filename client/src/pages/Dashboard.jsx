@@ -182,6 +182,7 @@ const Dashboard = () => {
     { label: "Compliance Tracker", icon: BarChart3,       section: "Compliance" },
     { label: "Documents",          icon: FileText,        section: "Documents"  },
     { label: "Schemes",            icon: Landmark,        section: "Schemes"    },
+    { label: "Industry Hub",       icon: Building2,       section: "Hub"        },
     { label: "Settings",           icon: Settings,        section: "Settings"   },
   ];
 
@@ -228,6 +229,14 @@ const Dashboard = () => {
                   }
                   if (item.section === "Compliance") {
                     navigate("/compliance");
+                    return;
+                  }
+                  if (item.section === "Schemes") {
+                    navigate("/hub?tab=schemes");
+                    return;
+                  }
+                  if (item.section === "Hub") {
+                    navigate("/hub");
                     return;
                   }
                   setActiveSection(item.section);
@@ -603,9 +612,16 @@ const Dashboard = () => {
 
             {/* Upcoming Deadlines */}
             <div id="section-Compliance" className="bg-white border border-[#cbc4d2] rounded-xl shadow-sm p-6 flex flex-col gap-4">
-              <h2 className="text-2xl font-semibold text-[#1d1b20] pb-4 border-b border-[#cbc4d2]">
-                Upcoming Deadlines
-              </h2>
+              <div className="flex items-center justify-between border-b border-[#cbc4d2] pb-4">
+                <h2 className="text-2xl font-semibold text-[#1d1b20]">Upcoming Deadlines</h2>
+                <button
+                  type="button"
+                  onClick={() => navigate("/compliance")}
+                  className="text-xs font-semibold text-[#4f378a] hover:underline"
+                >
+                  View All →
+                </button>
+              </div>
 
               {upcomingDeadlines.length === 0 ? (
                 <p className="text-sm text-[#7a7582] py-4 text-center">No upcoming compliance deadlines.</p>
@@ -635,9 +651,16 @@ const Dashboard = () => {
 
             {/* Matched Schemes */}
             <div id="section-Schemes" className="bg-white border border-[#cbc4d2] rounded-xl shadow-sm p-6 flex flex-col gap-4">
-              <h2 className="text-2xl font-semibold text-[#1d1b20] pb-4 border-b border-[#cbc4d2]">
-                Potential Schemes for You
-              </h2>
+              <div className="flex items-center justify-between border-b border-[#cbc4d2] pb-4">
+                <h2 className="text-2xl font-semibold text-[#1d1b20]">Potential Schemes for You</h2>
+                <button
+                  type="button"
+                  onClick={() => navigate("/hub?tab=schemes")}
+                  className="text-xs font-semibold text-[#4f378a] hover:underline"
+                >
+                  View All →
+                </button>
+              </div>
 
               {schemes.length === 0 ? (
                 <p className="text-sm text-[#7a7582] py-4 text-center">

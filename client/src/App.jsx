@@ -13,6 +13,7 @@ import Documents from './pages/Documents';
 import ApplicationTracking from './pages/ApplicationTracking';
 import ComplianceDashboard from './pages/ComplianceDashboard';
 import ComplianceDetail from './pages/ComplianceDetail';
+import IndustryHub from './pages/IndustryHub';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminApplicationReview from './pages/AdminApplicationReview';
 
@@ -36,6 +37,7 @@ const App = () => {
           <Route path="/applications"                element={<ProtectedRoute allowedRoles={['Industry']}><ApplicationTracking /></ProtectedRoute>} />
           <Route path="/compliance"                  element={<ProtectedRoute allowedRoles={['Industry']}><ComplianceDashboard /></ProtectedRoute>} />
           <Route path="/compliance/:id"              element={<ProtectedRoute allowedRoles={['Industry']}><ComplianceDetail /></ProtectedRoute>} />
+          <Route path="/hub"                         element={<ProtectedRoute allowedRoles={['Industry']}><IndustryHub /></ProtectedRoute>} />
 
           {/* Admin */}
           <Route path="/admin/dashboard"        element={<ProtectedRoute allowedRoles={['Admin']}><AdminDashboard /></ProtectedRoute>} />
