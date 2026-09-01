@@ -86,8 +86,52 @@ const SECTORS = [
 const inputClass =
   "w-full rounded-lg border border-[#cbc4d2] bg-white px-4 py-3 text-[#1d1b20] outline-none transition focus:border-[#4f378a] focus:ring-2 focus:ring-[#cfbcff]";
 
+const inputErrorClass =
+  "w-full rounded-lg border border-red-400 bg-red-50 px-4 py-3 text-[#1d1b20] outline-none transition focus:border-red-500 focus:ring-2 focus:ring-red-200";
+
 const labelClass =
   "mb-2 block text-xs font-semibold uppercase tracking-wider text-[#1d1b20]";
+
+// ── Per-step validation ─────────────────────────────────────────────────────
+const validateStep = (step, form) => {
+  const errs = {};
+
+  if (step === 1) {
+    if (!form.companyName.trim())     errs.companyName     = "Company name is required";
+    if (!form.sector)                 errs.sector          = "Please select a sector";
+    if (!form.state)                  errs.state           = "Please select a state";
+    if (!form.district.trim())        errs.district        = "District is required";
+    if (!form.projectLocation.trim()) errs.projectLocation = "Project location is required";
+    if (!form.pincode.trim())         errs.pincode         = "Pincode is required";
+    else if (!/^\d{6}$/.test(form.pincode.trim()))
+                                      errs.pincode         = "Pincode must be exactly 6 digits";
+  }
+
+  if (step === 2) {
+    if (!form.investment || Number(form.investment) <= 0)
+      errs.investment = "Investment must be greater than 0";
+    if (!form.employees || Number(form.employees) <= 0)
+      errs.employees = "Number of employees must be greater than 0";
+    if (!form.productionCapacity || Number(form.productionCapacity) <= 0)
+      errs.productionCapacity = "Production capacity must be greater than 0";
+    if (!form.manufacturingActivity.trim())
+      errs.manufacturingActivity = "Manufacturing activity is required";
+    if (!form.processes.trim())
+      errs.processes = "Key processes are required";
+  }
+
+  if (step === 3) {
+    if (!form.waterUsage || Number(form.waterUsage) <= 0)
+      errs.waterUsage = "Daily water usage must be greater than 0";
+    if (form.generatesWastewater && (!form.wastewater || Number(form.wastewater) <= 0))
+      errs.wastewater = "Wastewater volume must be greater than 0";
+    if (form.hazardousWaste && !form.wasteCategory.trim())
+      errs.wasteCategory = "Waste category is required when hazardous waste is selected";
+  }
+
+  // Step 4 always valid — radio always has a default value
+  return errs;
+};
 
 // ── Tooltip helper ──────────────────────────────────────────────────────────
 function Tooltip({ text }) {
@@ -118,6 +162,7 @@ function IndustryProfileWizard() {
   const [submitted, setSubmitted]     = useState(false);
   const [saving, setSaving]           = useState(false);
   const [error, setError]             = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [existingId, setExistingId]   = useState(null); // existing industry _id
   const navigate = useNavigate();
 
@@ -215,6 +260,13 @@ function IndustryProfileWizard() {
 
   const nextStep = () => {
     setError("");
+    const errs = validateStep(currentStep, form);
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    setFieldErrors({});
     if (currentStep < 4) {
       setCurrentStep((p) => p + 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -225,6 +277,7 @@ function IndustryProfileWizard() {
 
   const previousStep = () => {
     setError("");
+    setFieldErrors({});
     if (currentStep > 1) {
       setCurrentStep((p) => p - 1);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -236,6 +289,7 @@ function IndustryProfileWizard() {
     setCurrentStep(1);
     setSubmitted(false);
     setError("");
+    setFieldErrors({});
   };
 
   return (
@@ -306,9 +360,9 @@ function IndustryProfileWizard() {
 
         {/* Wizard Content */}
         <section className="w-full max-w-3xl">
-          {currentStep === 1 && <StepOne form={form} updateField={updateField} />}
-          {currentStep === 2 && <StepTwo form={form} updateField={updateField} />}
-          {currentStep === 3 && <StepThree form={form} updateField={updateField} />}
+          {currentStep === 1 && <StepOne form={form} updateField={updateField} errors={fieldErrors} />}
+          {currentStep === 2 && <StepTwo form={form} updateField={updateField} errors={fieldErrors} />}
+          {currentStep === 3 && <StepThree form={form} updateField={updateField} errors={fieldErrors} />}
           {currentStep === 4 && (
             <StepFour
               form={form}
@@ -399,7 +453,8 @@ function PageHeader({ step, title }) {
 /* ============================================================
    STEP 1 — Business Info & Location
 ============================================================ */
-function StepOne({ form, updateField }) {
+function StepOne({ form, updateField, errors }) {
+  const ic = (field) => errors[field] ? inputErrorClass : inputClass;
   return (
     <>
       <PageHeader step={1} title="Business & Location" />
@@ -421,11 +476,12 @@ function StepOne({ form, updateField }) {
                 Company / Enterprise Name <span className="text-red-500">*</span>
               </label>
               <input
-                className={inputClass}
+                className={ic("companyName")}
                 value={form.companyName}
                 onChange={(e) => updateField("companyName", e.target.value)}
                 placeholder="e.g. Acme Industries Ltd."
               />
+              {errors.companyName && <p className="mt-1 text-xs text-red-500">{errors.companyName}</p>}
             </div>
 
             {/* Sector */}
@@ -435,7 +491,7 @@ function StepOne({ form, updateField }) {
                 <Tooltip text="Select the sector that best describes your core operational activity." />
               </label>
               <select
-                className={inputClass}
+                className={ic("sector")}
                 value={form.sector}
                 onChange={(e) => updateField("sector", e.target.value)}
               >
@@ -444,6 +500,7 @@ function StepOne({ form, updateField }) {
                   <option key={s.value} value={s.value}>{s.label}</option>
                 ))}
               </select>
+              {errors.sector && <p className="mt-1 text-xs text-red-500">{errors.sector}</p>}
             </div>
 
             {/* Location Section */}
@@ -460,7 +517,7 @@ function StepOne({ form, updateField }) {
                     State / Union Territory <span className="text-red-500">*</span>
                   </label>
                   <select
-                    className={inputClass}
+                    className={ic("state")}
                     value={form.state}
                     onChange={(e) => updateField("state", e.target.value)}
                   >
@@ -469,6 +526,7 @@ function StepOne({ form, updateField }) {
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
+                  {errors.state && <p className="mt-1 text-xs text-red-500">{errors.state}</p>}
                 </div>
 
                 {/* District */}
@@ -477,11 +535,12 @@ function StepOne({ form, updateField }) {
                     District <span className="text-red-500">*</span>
                   </label>
                   <input
-                    className={inputClass}
+                    className={ic("district")}
                     value={form.district}
                     onChange={(e) => updateField("district", e.target.value)}
                     placeholder="e.g. Pune"
                   />
+                  {errors.district && <p className="mt-1 text-xs text-red-500">{errors.district}</p>}
                 </div>
               </div>
 
@@ -491,12 +550,13 @@ function StepOne({ form, updateField }) {
                   Exact Project Location / Plot Details <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  className={inputClass}
+                  className={ic("projectLocation")}
                   rows={3}
                   value={form.projectLocation}
                   onChange={(e) => updateField("projectLocation", e.target.value)}
                   placeholder="Plot No, Industrial Estate Name, Village/City..."
                 />
+                {errors.projectLocation && <p className="mt-1 text-xs text-red-500">{errors.projectLocation}</p>}
               </div>
 
               {/* Pincode */}
@@ -505,12 +565,13 @@ function StepOne({ form, updateField }) {
                   Pincode <span className="text-red-500">*</span>
                 </label>
                 <input
-                  className={inputClass}
+                  className={ic("pincode")}
                   value={form.pincode}
                   onChange={(e) => updateField("pincode", e.target.value)}
                   maxLength={6}
                   placeholder="6-digit pincode"
                 />
+                {errors.pincode && <p className="mt-1 text-xs text-red-500">{errors.pincode}</p>}
               </div>
             </div>
           </div>
@@ -523,7 +584,8 @@ function StepOne({ form, updateField }) {
 /* ============================================================
    STEP 2 — Scale & Activity
 ============================================================ */
-function StepTwo({ form, updateField }) {
+function StepTwo({ form, updateField, errors }) {
+  const ic = (field) => errors[field] ? inputErrorClass : inputClass;
   return (
     <>
       <PageHeader step={2} title="Scale & Activity" />
@@ -553,7 +615,7 @@ function StepTwo({ form, updateField }) {
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#494551]">₹</span>
                 <input
-                  className={`${inputClass} pl-8`}
+                  className={`${ic("investment")} pl-8`}
                   type="number"
                   min={0}
                   value={form.investment}
@@ -561,7 +623,9 @@ function StepTwo({ form, updateField }) {
                   placeholder="0.00"
                 />
               </div>
-              <p className="mt-1 text-sm text-[#494551]">Enter value in Lakhs.</p>
+              {errors.investment
+                ? <p className="mt-1 text-xs text-red-500">{errors.investment}</p>
+                : <p className="mt-1 text-sm text-[#494551]">Enter value in Lakhs.</p>}
             </div>
 
             {/* Employees */}
@@ -572,7 +636,7 @@ function StepTwo({ form, updateField }) {
               <div className="relative">
                 <Users className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7a7582]" size={18} />
                 <input
-                  className={`${inputClass} pl-10`}
+                  className={`${ic("employees")} pl-10`}
                   type="number"
                   min={0}
                   value={form.employees}
@@ -580,6 +644,7 @@ function StepTwo({ form, updateField }) {
                   placeholder="e.g. 250"
                 />
               </div>
+              {errors.employees && <p className="mt-1 text-xs text-red-500">{errors.employees}</p>}
             </div>
 
             {/* Production Capacity */}
@@ -590,7 +655,7 @@ function StepTwo({ form, updateField }) {
               </label>
               <div className="flex">
                 <input
-                  className={`${inputClass} rounded-r-none`}
+                  className={`${ic("productionCapacity")} rounded-r-none`}
                   type="number"
                   min={0}
                   value={form.productionCapacity}
@@ -609,6 +674,7 @@ function StepTwo({ form, updateField }) {
                   <option>KW</option>
                 </select>
               </div>
+              {errors.productionCapacity && <p className="mt-1 text-xs text-red-500">{errors.productionCapacity}</p>}
             </div>
 
             {/* Manufacturing Activity */}
@@ -618,11 +684,12 @@ function StepTwo({ form, updateField }) {
                 <Tooltip text="Describe the main product or service produced at this facility." />
               </label>
               <input
-                className={inputClass}
+                className={ic("manufacturingActivity")}
                 value={form.manufacturingActivity}
                 onChange={(e) => updateField("manufacturingActivity", e.target.value)}
                 placeholder="e.g. Steel rolling, Textile dyeing, Chemical synthesis..."
               />
+              {errors.manufacturingActivity && <p className="mt-1 text-xs text-red-500">{errors.manufacturingActivity}</p>}
             </div>
 
             {/* Processes */}
@@ -631,16 +698,18 @@ function StepTwo({ form, updateField }) {
                 Key Manufacturing Processes <span className="text-red-500">*</span>
               </label>
               <textarea
-                className={inputClass}
+                className={ic("processes")}
                 rows={4}
                 value={form.processes}
                 onChange={(e) => updateField("processes", e.target.value)}
                 placeholder="Briefly describe the core manufacturing or operational processes..."
               />
-              <p className="mt-1 flex items-center text-sm text-[#494551]">
-                <Lightbulb size={14} className="mr-1" />
-                Provide a high-level overview of the production lifecycle.
-              </p>
+              {errors.processes
+                ? <p className="mt-1 text-xs text-red-500">{errors.processes}</p>
+                : <p className="mt-1 flex items-center text-sm text-[#494551]">
+                    <Lightbulb size={14} className="mr-1" />
+                    Provide a high-level overview of the production lifecycle.
+                  </p>}
             </div>
           </div>
         </div>
@@ -652,7 +721,8 @@ function StepTwo({ form, updateField }) {
 /* ============================================================
    STEP 3 — Environmental Impact
 ============================================================ */
-function StepThree({ form, updateField }) {
+function StepThree({ form, updateField, errors }) {
+  const ic = (field) => errors[field] ? inputErrorClass : inputClass;
   return (
     <>
       <PageHeader step={3} title="Environmental Impact" />
@@ -684,14 +754,16 @@ function StepThree({ form, updateField }) {
                     <Tooltip text="Total volume of water consumed daily from all sources." />
                   </label>
                   <input
-                    className={inputClass}
+                    className={ic("waterUsage")}
                     type="number"
                     min={0}
                     value={form.waterUsage}
                     onChange={(e) => updateField("waterUsage", e.target.value)}
                     placeholder="e.g. 5000"
                   />
-                  <span className="text-sm text-[#494551]">Total volume extracted from all sources.</span>
+                  {errors.waterUsage
+                    ? <p className="mt-1 text-xs text-red-500">{errors.waterUsage}</p>
+                    : <span className="text-sm text-[#494551]">Total volume extracted from all sources.</span>}
                 </div>
 
                 <div>
@@ -738,13 +810,14 @@ function StepThree({ form, updateField }) {
                       Daily Wastewater Volume (Liters/Day)
                     </label>
                     <input
-                      className={inputClass}
+                      className={ic("wastewater")}
                       type="number"
                       min={0}
                       value={form.wastewater}
                       onChange={(e) => updateField("wastewater", e.target.value)}
                       placeholder="e.g. 3500"
                     />
+                    {errors.wastewater && <p className="mt-1 text-xs text-red-500">{errors.wastewater}</p>}
                   </div>
 
                   <div>
@@ -796,11 +869,12 @@ function StepThree({ form, updateField }) {
                   <div>
                     <label className={labelClass}>Waste Category (Authorization Required)</label>
                     <input
-                      className={inputClass}
+                      className={ic("wasteCategory")}
                       value={form.wasteCategory}
                       onChange={(e) => updateField("wasteCategory", e.target.value)}
                       placeholder="e.g. Used Oil, Chemical Sludge"
                     />
+                    {errors.wasteCategory && <p className="mt-1 text-xs text-red-500">{errors.wasteCategory}</p>}
                   </div>
 
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
