@@ -43,10 +43,12 @@ const getInspections = async (req, res) => {
   try {
     const industry = await Industry.findOne({ userId: req.user.id });
     if (!industry) {
-      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Industry profile not found' } });
+      return res.json({ success: true, data: [] });
     }
 
-    const inspections = await Inspection.find({ industryId: industry._id }).populate('applicationId');
+    const inspections = await Inspection.find({ industryId: industry._id })
+      .populate({ path: 'applicationId', populate: { path: 'approvalId', select: 'approvalName authority slaDays' } })
+      .sort({ scheduledDate: 1 });
     return res.json({ success: true, data: inspections });
   } catch (err) {
     console.error('Get Inspections Error:', err);
