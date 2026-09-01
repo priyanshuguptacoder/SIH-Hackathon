@@ -226,6 +226,10 @@ const Dashboard = () => {
                     navigate("/applications");
                     return;
                   }
+                  if (item.section === "Compliance") {
+                    navigate("/compliance");
+                    return;
+                  }
                   setActiveSection(item.section);
                   // scroll to anchor if it exists on page
                   const el = document.getElementById(`section-${item.section}`);
