@@ -1,315 +1,163 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import api from '../api/api';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import AdminLayout from "../components/AdminLayout";
+import api from "../api/api";
 import {
-  Shield,
-  FileText,
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-  Eye,
-  LogOut,
-  Users,
-  BookOpen,
-  Settings
-} from 'lucide-react';
+  Users, FileText, BookOpen, Landmark, Clock,
+  CheckCircle, XCircle, AlertTriangle, Eye, RefreshCw,
+  TrendingUp, Activity, ShieldCheck,
+} from "lucide-react";
 
-const AdminDashboard = () => {
-  const { user, logout } = useAuth();
+const STATUS_CFG = {
+  SUBMITTED:          { label: "Submitted",    cls: "bg-blue-100 text-blue-700"    },
+  UNDER_REVIEW:       { label: "Under Review", cls: "bg-yellow-100 text-yellow-700"},
+  INSPECTION:         { label: "Inspection",   cls: "bg-purple-100 text-purple-700"},
+  APPROVED:           { label: "Approved",     cls: "bg-green-100 text-green-700"  },
+  REJECTED:           { label: "Rejected",     cls: "bg-red-100 text-red-700"      },
+  DOCUMENTS_PREPARED: { label: "Docs Ready",   cls: "bg-indigo-100 text-indigo-700"},
+  NOT_STARTED:        { label: "Not Started",  cls: "bg-gray-100 text-gray-600"    },
+};
+
+function StatusBadge({ status }) {
+  const cfg = STATUS_CFG[status] || STATUS_CFG.NOT_STARTED;
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${cfg.cls}`}>
+      {cfg.label}
+    </span>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, sub, color = "bg-[#f0ebff]", iconColor = "text-[#4f378a]" }) {
+  return (
+    <div className="rounded-xl border border-[#e6e0e9] bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between">
+        <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${color}`}>
+          <Icon size={20} className={iconColor} />
+        </div>
+        <span className="text-3xl font-black text-[#1d1b20]">{value ?? "—"}</span>
+      </div>
+      <p className="mt-3 text-sm font-semibold text-[#494551]">{label}</p>
+      {sub && <p className="text-xs text-[#7a7582]">{sub}</p>}
+    </div>
+  );
+}
+
+export default function AdminDashboard() {
   const navigate = useNavigate();
-  
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalApplications: 0,
-    activeRules: 0,
-    totalSchemes: 0,
-    reviewStats: {
-      pendingApproval: 0,
-      underReview: 0,
-      approved: 0,
-      rejected: 0
-    }
-  });
-  
-  const [applications, setApplications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [stats,    setStats]    = useState(null);
+  const [apps,     setApps]     = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState("");
 
-  useEffect(() => {
-    fetchDashboardData();
-    fetchApplicationsForReview();
-  }, []);
-
-  async function fetchDashboardData() {
+  const load = async () => {
+    setLoading(true);
     try {
-      const { data: result } = await api.get('/admin/dashboard');
-      setStats(result.data);
-    } catch (err) {
-      console.error('Error fetching dashboard data:', err);
-      setError('Failed to load dashboard statistics');
-    }
-  };
-
-  async function fetchApplicationsForReview() {
-    try {
-      const { data: result } = await api.get('/admin/applications');
-      setApplications(result.data);
-      setError('');
-    } catch (err) {
-      console.error('Error fetching applications:', err);
-      setError('Failed to load applications');
+      const [sRes, aRes] = await Promise.all([
+        api.get("/admin/dashboard"),
+        api.get("/admin/applications"),
+      ]);
+      if (sRes.data?.success) setStats(sRes.data.data);
+      if (aRes.data?.success) setApps(aRes.data.data || []);
+      setError("");
+    } catch {
+      setError("Failed to load dashboard data.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  useEffect(() => { load(); }, []);
 
-  const handleReviewApplication = (applicationId) => {
-    navigate(`/admin/applications/${applicationId}`);
-  };
-
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      'SUBMITTED': { color: 'bg-blue-100 text-blue-700', label: 'Submitted' },
-      'UNDER_REVIEW': { color: 'bg-yellow-100 text-yellow-700', label: 'Under Review' },
-      'INSPECTION': { color: 'bg-purple-100 text-purple-700', label: 'Inspection' },
-      'APPROVED': { color: 'bg-green-100 text-green-700', label: 'Approved' },
-      'REJECTED': { color: 'bg-red-100 text-red-700', label: 'Rejected' }
-    };
-
-    const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-700', label: status };
-    
-    return (
-      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${config.color}`}>
-        {config.label}
-      </span>
-    );
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#fdf7ff] flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-t-[#4f378a] border-[#4f378a]/20 rounded-full animate-spin" />
-      </div>
-    );
-  }
+  const fmt = (d) => d ? new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
   return (
-    <div className="min-h-screen bg-[#fdf7ff]">
-      {/* Header */}
-      <header className="bg-white border-b border-[#cbc4d2]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Shield className="w-8 h-8 text-[#4f378a]" />
+    <AdminLayout title="Admin Dashboard" subtitle="System overview and application review queue">
+      {loading && (
+        <div className="flex items-center justify-center py-24">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#4f378a] border-t-transparent" />
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-sm text-red-600">{error}</div>
+      )}
+
+      {!loading && stats && (
+        <>
+          {/* System stats */}
+          <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+            <StatCard icon={Users}       label="Total Users"       value={stats.totalUsers}       color="bg-blue-50"   iconColor="text-blue-600"   />
+            <StatCard icon={FileText}    label="Total Applications" value={stats.totalApplications} color="bg-green-50"  iconColor="text-green-600"  />
+            <StatCard icon={BookOpen}    label="Active Rules"       value={stats.activeRules}       color="bg-[#f0ebff]" iconColor="text-[#4f378a]"  />
+            <StatCard icon={Landmark}    label="Schemes"            value={stats.totalSchemes}      color="bg-orange-50" iconColor="text-orange-600" />
+          </div>
+
+          {/* Review stats */}
+          <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
+            <StatCard icon={Clock}         label="Pending Review"  value={stats.reviewStats?.pendingApproval} color="bg-blue-50"   iconColor="text-blue-600"   sub="Awaiting first review" />
+            <StatCard icon={Activity}      label="Under Review"    value={stats.reviewStats?.underReview}     color="bg-yellow-50" iconColor="text-yellow-600" sub="Being processed"       />
+            <StatCard icon={CheckCircle}   label="Approved"        value={stats.reviewStats?.approved}        color="bg-green-50"  iconColor="text-green-600"  sub="All time"              />
+            <StatCard icon={XCircle}       label="Rejected"        value={stats.reviewStats?.rejected}        color="bg-red-50"    iconColor="text-red-600"    sub="All time"              />
+          </div>
+
+          {/* Applications review table */}
+          <div className="rounded-xl border border-[#e6e0e9] bg-white shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between border-b border-[#e6e0e9] bg-[#fdf7ff] px-6 py-4">
               <div>
-                <h1 className="text-2xl font-bold text-[#1d1b20]">Admin Portal</h1>
-                <p className="text-sm text-[#494551]">Authority Dashboard - Application Review & System Management</p>
+                <h2 className="font-bold text-[#1d1b20]">Applications for Review</h2>
+                <p className="text-xs text-[#7a7582]">Submitted, under review, and inspection-pending applications</p>
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={load}
+                  className="flex items-center gap-1.5 rounded-lg border border-[#cbc4d2] px-3 py-1.5 text-xs font-semibold text-[#4f378a] hover:bg-[#f8f2fa]">
+                  <RefreshCw size={13} /> Refresh
+                </button>
+                <button type="button" onClick={() => navigate("/admin/applications")}
+                  className="flex items-center gap-1.5 rounded-lg bg-[#4f378a] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#6750a4]">
+                  View All
+                </button>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm font-semibold text-[#1d1b20]">{user?.name || 'Admin'}</p>
-                <p className="text-xs text-[#7a7582]">Administrator</p>
-              </div>
-              
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 bg-[#4f378a] hover:bg-[#6750a4] text-white rounded-lg text-sm font-semibold transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
-            {error}
-          </div>
-        )}
-
-        {/* System Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl border border-[#cbc4d2] p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <Users className="w-6 h-6 text-blue-600" />
-              </div>
-              <span className="text-3xl font-bold text-[#1d1b20]">{stats.totalUsers}</span>
-            </div>
-            <h3 className="text-sm font-semibold text-[#494551]">Total Users</h3>
-          </div>
-
-          <div className="bg-white rounded-xl border border-[#cbc4d2] p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-3 bg-green-50 rounded-lg">
-                <FileText className="w-6 h-6 text-green-600" />
-              </div>
-              <span className="text-3xl font-bold text-[#1d1b20]">{stats.totalApplications}</span>
-            </div>
-            <h3 className="text-sm font-semibold text-[#494551]">Total Applications</h3>
-          </div>
-
-          <div className="bg-white rounded-xl border border-[#cbc4d2] p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-3 bg-purple-50 rounded-lg">
-                <BookOpen className="w-6 h-6 text-purple-600" />
-              </div>
-              <span className="text-3xl font-bold text-[#1d1b20]">{stats.activeRules}</span>
-            </div>
-            <h3 className="text-sm font-semibold text-[#494551]">Active Rules</h3>
-          </div>
-
-          <div className="bg-white rounded-xl border border-[#cbc4d2] p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-3 bg-orange-50 rounded-lg">
-                <Settings className="w-6 h-6 text-orange-600" />
-              </div>
-              <span className="text-3xl font-bold text-[#1d1b20]">{stats.totalSchemes}</span>
-            </div>
-            <h3 className="text-sm font-semibold text-[#494551]">Total Schemes</h3>
-          </div>
-        </div>
-
-        {/* Application Review Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl border border-[#cbc4d2] p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <Clock className="w-6 h-6 text-blue-600" />
-              </div>
-              <span className="text-3xl font-bold text-[#1d1b20]">{stats.reviewStats.pendingApproval}</span>
-            </div>
-            <h3 className="text-sm font-semibold text-[#494551]">Pending Review</h3>
-          </div>
-
-          <div className="bg-white rounded-xl border border-[#cbc4d2] p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-3 bg-yellow-50 rounded-lg">
-                <AlertTriangle className="w-6 h-6 text-yellow-600" />
-              </div>
-              <span className="text-3xl font-bold text-[#1d1b20]">{stats.reviewStats.underReview}</span>
-            </div>
-            <h3 className="text-sm font-semibold text-[#494551]">Under Review</h3>
-          </div>
-
-          <div className="bg-white rounded-xl border border-[#cbc4d2] p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-3 bg-green-50 rounded-lg">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-              </div>
-              <span className="text-3xl font-bold text-[#1d1b20]">{stats.reviewStats.approved}</span>
-            </div>
-            <h3 className="text-sm font-semibold text-[#494551]">Approved</h3>
-          </div>
-
-          <div className="bg-white rounded-xl border border-[#cbc4d2] p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-3 bg-red-50 rounded-lg">
-                <AlertTriangle className="w-6 h-6 text-red-600" />
-              </div>
-              <span className="text-3xl font-bold text-[#1d1b20]">{stats.reviewStats.rejected}</span>
-            </div>
-            <h3 className="text-sm font-semibold text-[#494551]">Rejected</h3>
-          </div>
-        </div>
-
-        {/* Applications for Review */}
-        <div className="bg-white rounded-xl border border-[#cbc4d2] shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-[#cbc4d2]">
-            <h2 className="text-lg font-bold text-[#1d1b20]">Applications for Review</h2>
-            <p className="text-sm text-[#7a7582]">Applications requiring authority review and approval</p>
-          </div>
-
-          <div className="overflow-x-auto">
-            {applications.length === 0 ? (
-              <div className="px-6 py-12 text-center">
-                <FileText className="w-12 h-12 text-[#7a7582] mx-auto mb-3" />
-                <p className="text-[#494551]">No applications to review at this time</p>
+            {apps.length === 0 ? (
+              <div className="flex flex-col items-center py-16 gap-3 text-center">
+                <ShieldCheck className="h-12 w-12 text-[#cbc4d2]" />
+                <p className="text-sm font-semibold text-[#494551]">No applications pending review</p>
               </div>
             ) : (
-              <table className="w-full">
-                <thead className="bg-[#fdf7ff]">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-[#494551] uppercase tracking-wider">
-                      Application ID
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-[#494551] uppercase tracking-wider">
-                      Industry Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-[#494551] uppercase tracking-wider">
-                      Approval Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-[#494551] uppercase tracking-wider">
-                      Submission Date
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-[#494551] uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-[#494551] uppercase tracking-wider">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#cbc4d2]">
-                  {applications.map((application) => (
-                    <tr key={application._id} className="hover:bg-[#fdf7ff] transition-colors">
-                      <td className="px-6 py-4 text-sm font-medium text-[#1d1b20]">
-                        {application._id.slice(-8).toUpperCase()}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-[#494551]">
-                        {application.industryId?.companyName || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-[#494551]">
-                        {application.approvalId?.approvalType || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-[#494551]">
-                        {formatDate(application.submissionDate)}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        {getStatusBadge(application.status)}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <button
-                          onClick={() => handleReviewApplication(application._id)}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-[#4f378a] hover:bg-[#6750a4] text-white rounded-lg text-xs font-semibold transition-colors"
-                        >
-                          <Eye className="w-4 h-4" />
-                          Review
-                        </button>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[#e6e0e9] text-left">
+                      {["ID","Industry","Approval","Submitted","Status","Action"].map(h => (
+                        <th key={h} className="px-5 py-3 text-xs font-bold uppercase tracking-wider text-[#7a7582]">{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {apps.slice(0, 10).map((app, i) => (
+                      <tr key={app._id} className={`border-b border-[#e6e0e9] last:border-0 ${i % 2 ? "bg-[#fdf7ff]" : ""}`}>
+                        <td className="px-5 py-3 font-mono text-xs text-[#7a7582]">{app._id.slice(-8).toUpperCase()}</td>
+                        <td className="px-5 py-3 font-semibold text-[#1d1b20]">{app.industryId?.companyName || "—"}</td>
+                        <td className="px-5 py-3 text-[#494551]">{app.approvalId?.approvalName || "—"}</td>
+                        <td className="px-5 py-3 text-[#7a7582]">{fmt(app.submissionDate)}</td>
+                        <td className="px-5 py-3"><StatusBadge status={app.status} /></td>
+                        <td className="px-5 py-3">
+                          <button type="button"
+                            onClick={() => navigate(`/admin/applications/${app._id}`)}
+                            className="flex items-center gap-1.5 rounded-lg bg-[#4f378a] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#6750a4]">
+                            <Eye size={12} /> Review
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
-        </div>
-      </main>
-    </div>
+        </>
+      )}
+    </AdminLayout>
   );
-};
-
-export default AdminDashboard;
+}

@@ -16,6 +16,15 @@ import ComplianceDetail from './pages/ComplianceDetail';
 import IndustryHub from './pages/IndustryHub';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminApplicationReview from './pages/AdminApplicationReview';
+import AdminApplicationsList from './pages/AdminApplicationsList';
+import AdminRules from './pages/AdminRules';
+import AdminSchemes from './pages/AdminSchemes';
+import AdminRegulations from './pages/AdminRegulations';
+import AdminKnowledgeBase from './pages/AdminKnowledgeBase';
+import AdminAuditLog from './pages/AdminAuditLog';
+
+const A = ({ children }) => <ProtectedRoute allowedRoles={['Admin']}>{children}</ProtectedRoute>;
+const I = ({ children }) => <ProtectedRoute allowedRoles={['Industry']}>{children}</ProtectedRoute>;
 
 const App = () => {
   return (
@@ -24,24 +33,30 @@ const App = () => {
         <Routes>
           {/* Public */}
           <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<Login />} />
+          <Route path="/login"    element={<Login />} />
           <Route path="/register" element={<Register />} />
 
           {/* Industry */}
-          <Route path="/dashboard"                   element={<ProtectedRoute allowedRoles={['Industry']}><Dashboard /></ProtectedRoute>} />
-          <Route path="/wizard"                      element={<ProtectedRoute allowedRoles={['Industry']}><Wizard /></ProtectedRoute>} />
-          <Route path="/analyze"                     element={<ProtectedRoute allowedRoles={['Industry']}><Analysis /></ProtectedRoute>} />
-          <Route path="/roadmap/:industryId"         element={<ProtectedRoute allowedRoles={['Industry']}><ApprovalRoadmap /></ProtectedRoute>} />
-          <Route path="/approval/:approvalId/detail" element={<ProtectedRoute allowedRoles={['Industry']}><ApprovalDetail /></ProtectedRoute>} />
-          <Route path="/documents"                   element={<ProtectedRoute allowedRoles={['Industry']}><Documents /></ProtectedRoute>} />
-          <Route path="/applications"                element={<ProtectedRoute allowedRoles={['Industry']}><ApplicationTracking /></ProtectedRoute>} />
-          <Route path="/compliance"                  element={<ProtectedRoute allowedRoles={['Industry']}><ComplianceDashboard /></ProtectedRoute>} />
-          <Route path="/compliance/:id"              element={<ProtectedRoute allowedRoles={['Industry']}><ComplianceDetail /></ProtectedRoute>} />
-          <Route path="/hub"                         element={<ProtectedRoute allowedRoles={['Industry']}><IndustryHub /></ProtectedRoute>} />
+          <Route path="/dashboard"                   element={<I><Dashboard /></I>} />
+          <Route path="/wizard"                      element={<I><Wizard /></I>} />
+          <Route path="/analyze"                     element={<I><Analysis /></I>} />
+          <Route path="/roadmap/:industryId"         element={<I><ApprovalRoadmap /></I>} />
+          <Route path="/approval/:approvalId/detail" element={<I><ApprovalDetail /></I>} />
+          <Route path="/documents"                   element={<I><Documents /></I>} />
+          <Route path="/applications"                element={<I><ApplicationTracking /></I>} />
+          <Route path="/compliance"                  element={<I><ComplianceDashboard /></I>} />
+          <Route path="/compliance/:id"              element={<I><ComplianceDetail /></I>} />
+          <Route path="/hub"                         element={<I><IndustryHub /></I>} />
 
           {/* Admin */}
-          <Route path="/admin/dashboard"        element={<ProtectedRoute allowedRoles={['Admin']}><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/admin/applications/:id" element={<ProtectedRoute allowedRoles={['Admin']}><AdminApplicationReview /></ProtectedRoute>} />
+          <Route path="/admin/dashboard"        element={<A><AdminDashboard /></A>} />
+          <Route path="/admin/applications"     element={<A><AdminApplicationsList /></A>} />
+          <Route path="/admin/applications/:id" element={<A><AdminApplicationReview /></A>} />
+          <Route path="/admin/rules"            element={<A><AdminRules /></A>} />
+          <Route path="/admin/schemes"          element={<A><AdminSchemes /></A>} />
+          <Route path="/admin/regulations"      element={<A><AdminRegulations /></A>} />
+          <Route path="/admin/knowledge"        element={<A><AdminKnowledgeBase /></A>} />
+          <Route path="/admin/audit"            element={<A><AdminAuditLog /></A>} />
         </Routes>
       </Router>
     </AuthProvider>
