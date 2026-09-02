@@ -1,5 +1,3 @@
-
-
 require('dotenv').config();
 const mongoose = require('mongoose');
 const sampleChunks = require('./Samplechunks');
@@ -48,7 +46,7 @@ async function run() {
             console.log('  -> Inserted with', embedding.length, 'dimensions');
         }
 
-        console.log(`\nDone. Inserted ${sampleChunks.length} chunks into regulation_chunks.`);
+        console.log(`\nDone. Inserted ${sampleChunks.length} chunks into regulationchunks.`);
     } catch (err) {
         console.error('Error:', err.message);
     } finally {
