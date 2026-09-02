@@ -1,12 +1,14 @@
 const Approval = require('../models/Approval');
 const RegulatoryRule = require('../models/RegulatoryRule');
 const ComplianceRule = require('../models/ComplianceRule');
+const ComplianceItem = require('../models/ComplianceItem');
 const Scheme = require('../models/Scheme');
 const AuditLog = require('../models/AuditLog');
 const Application = require('../models/Application');
 const User = require('../models/User');
 const Industry = require('../models/Industry');
 const Document = require('../models/Document');
+const { createNotification } = require('./notificationsController');
 const fs = require('fs');
 const path = require('path');
 
@@ -417,6 +419,88 @@ const reviewApplication = async (req, res) => {
     });
 
     await application.save();
+
+    // Auto-generate compliance items when approving
+    if (action === 'approve' && application.approvalId) {
+      const approvalId = application.approvalId._id || application.approvalId;
+      const complianceRules = await ComplianceRule.find({ approvalId });
+      if (complianceRules.length > 0) {
+        const items = complianceRules.map(rule => {
+          const dueDate = new Date(now);
+          dueDate.setDate(now.getDate() + rule.daysUntilDue);
+          return {
+            industryId:      application.industryId._id || application.industryId,
+            approvalId:      approvalId,
+            requirementText: rule.requirementText,
+            recurrence:      rule.recurrence,
+            status:          'UPCOMING',
+            dueDate,
+            source:          rule.source || ''
+          };
+        });
+        const created = await ComplianceItem.insertMany(items);
+
+        // Notify for each compliance obligation created
+        const industryOwnerId = application.industryId?.userId;
+        if (industryOwnerId) {
+          for (const item of created) {
+            const daysUntil = Math.ceil((new Date(item.dueDate) - now) / (1000 * 60 * 60 * 24));
+            createNotification({
+              userId: industryOwnerId,
+              type: 'DEADLINE',
+              title: 'New Compliance Obligation',
+              message: `"${item.requirementText}" is due in ${daysUntil} days. Recurrence: ${item.recurrence}.`,
+              relatedModel: 'ComplianceItem',
+              relatedId: item._id
+            });
+          }
+        }
+      }
+    }
+
+    // Notify the industry user about the decision
+    const industryUserId = application.industryId?.userId;
+    if (industryUserId) {
+      const approvalName = application.approvalId?.approvalName || 'your application';
+
+      if (action === 'approve') {
+        createNotification({
+          userId: industryUserId,
+          type: 'GENERAL',
+          title: '🎉 Application Approved',
+          message: `Your application for "${approvalName}" has been approved by the authority. Compliance obligations have been generated.`,
+          relatedModel: 'Application',
+          relatedId: application._id
+        });
+      } else if (action === 'reject') {
+        createNotification({
+          userId: industryUserId,
+          type: 'GENERAL',
+          title: 'Application Rejected',
+          message: `Your application for "${approvalName}" was rejected. Remarks: ${application.remarks}`,
+          relatedModel: 'Application',
+          relatedId: application._id
+        });
+      } else if (action === 'inspection') {
+        createNotification({
+          userId: industryUserId,
+          type: 'GENERAL',
+          title: 'Inspection Scheduled',
+          message: `An inspection has been scheduled for your "${approvalName}" application. Please prepare your facility.`,
+          relatedModel: 'Application',
+          relatedId: application._id
+        });
+      } else if (action === 'query') {
+        createNotification({
+          userId: industryUserId,
+          type: 'GENERAL',
+          title: 'Query Raised on Application',
+          message: `The authority has raised a query on your "${approvalName}" application: ${application.remarks}`,
+          relatedModel: 'Application',
+          relatedId: application._id
+        });
+      }
+    }
 
     // Audit log
     AuditLog.record({

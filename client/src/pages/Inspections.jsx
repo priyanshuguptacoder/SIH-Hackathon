@@ -224,8 +224,8 @@ function UpdateModal({ inspection, onClose, onUpdated }) {
     setSaving(true);
     setErr("");
     try {
-      const res = await api.put(`/inspections/${inspection._id}`, { status: target, remarks });
-      onUpdated(res.data.data);
+      await api.put(`/inspections/${inspection._id}`, { status: target, remarks });
+      await onUpdated();
       onClose();
     } catch (e) {
       setErr(e.response?.data?.error?.message || e.response?.data?.error || "Failed to update inspection.");
@@ -431,10 +431,11 @@ export default function Inspections() {
     showToast("Inspection scheduled successfully.");
   };
 
-  const handleUpdated = (updated) => {
-    setInspections((prev) =>
-      prev.map((i) => i._id === updated._id ? { ...i, ...updated } : i)
-    );
+  const handleUpdated = async () => {
+    try {
+      const res = await api.get("/inspections");
+      if (res.data?.success) setInspections(res.data.data || []);
+    } catch { /* silent */ }
     showToast("Inspection updated.");
   };
 

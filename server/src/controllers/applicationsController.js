@@ -4,6 +4,7 @@ const ComplianceRule = require('../models/ComplianceRule');
 const Industry = require('../models/Industry');
 const Approval = require('../models/Approval');
 const AuditLog = require('../models/AuditLog');
+const { createNotification } = require('./notificationsController');
 
 // Valid state transitions (strict state machine)
 const VALID_TRANSITIONS = {
@@ -117,14 +118,41 @@ const updateApplicationStatus = async (req, res) => {
       const expectedDate = new Date(now);
       expectedDate.setDate(now.getDate() + slaDays);
       application.expectedCompletionDate = expectedDate;
+
+      createNotification({
+        userId: req.user.id,
+        type: 'GENERAL',
+        title: 'Application Submitted',
+        message: `Your application for "${application.approvalId.approvalName}" has been submitted. Expected decision in ${slaDays} days.`,
+        relatedModel: 'Application',
+        relatedId: application._id
+      });
     }
 
     if (status === 'INSPECTION') {
       application.inspectionDate = now;
+
+      createNotification({
+        userId: req.user.id,
+        type: 'GENERAL',
+        title: 'Inspection Scheduled',
+        message: `An inspection has been scheduled for your "${application.approvalId.approvalName}" application. Prepare your facility.`,
+        relatedModel: 'Application',
+        relatedId: application._id
+      });
     }
 
     if (status === 'APPROVED') {
       application.approvalDate = now;
+
+      createNotification({
+        userId: req.user.id,
+        type: 'GENERAL',
+        title: '🎉 Application Approved',
+        message: `Your application for "${application.approvalId.approvalName}" has been approved. Compliance obligations have been generated.`,
+        relatedModel: 'Application',
+        relatedId: application._id
+      });
 
       // Data-driven compliance generation from ComplianceRule
       const complianceRules = await ComplianceRule.find({ approvalId: application.approvalId._id });
@@ -148,6 +176,15 @@ const updateApplicationStatus = async (req, res) => {
 
     if (status === 'REJECTED') {
       application.rejectionDate = now;
+
+      createNotification({
+        userId: req.user.id,
+        type: 'GENERAL',
+        title: 'Application Rejected',
+        message: `Your application for "${application.approvalId.approvalName}" has been rejected. Please review the remarks and resubmit.`,
+        relatedModel: 'Application',
+        relatedId: application._id
+      });
     }
 
     await application.save();
