@@ -108,7 +108,7 @@ const AdminApplicationReview = () => {
   };
 
   const canReview = () => {
-    return application && ['SUBMITTED', 'UNDER_REVIEW'].includes(application.status);
+    return application && ['SUBMITTED', 'UNDER_REVIEW', 'INSPECTION'].includes(application.status);
   };
 
   if (loading) {
@@ -311,13 +311,15 @@ const AdminApplicationReview = () => {
                       Raise Query
                     </button>
 
-                    <button
-                      onClick={() => { setAction('inspection'); setShowReviewForm(true); }}
-                      className="w-full flex items-center gap-2 px-4 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-semibold transition-colors"
-                    >
-                      <Search className="w-5 h-5" />
-                      Schedule Inspection
-                    </button>
+                    {application.status !== 'INSPECTION' && (
+                      <button
+                        onClick={() => { setAction('inspection'); setShowReviewForm(true); }}
+                        className="w-full flex items-center gap-2 px-4 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-semibold transition-colors"
+                      >
+                        <Search className="w-5 h-5" />
+                        Schedule Inspection
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <form onSubmit={handleReviewSubmit} className="space-y-4">
