@@ -8,7 +8,7 @@ const RegulationChunk = require('../models/RegulationChunk');
 
 async function embedText(text) {
     const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${process.env.GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$${process.env.GEMINI_API_KEY}`,
         {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -42,7 +42,7 @@ async function run() {
                     path: 'embedding',
                     queryVector: queryEmbedding,
                     numCandidates: 50,
-                    limit: 3
+                    limit: 5
                 }
             },
             {

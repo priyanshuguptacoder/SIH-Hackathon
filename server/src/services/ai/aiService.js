@@ -1,6 +1,7 @@
 
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
+const Industry = require('../../models/Industry');
 
 const RegulationChunk = require('../../models/RegulationChunk');
 
@@ -13,16 +14,18 @@ const RegulationChunk = require('../../models/RegulationChunk');
 
 const SIMILARITY_THRESHOLD = 0.7; // tune this after testing with real questions
 
-// Step 1: embed the user's message
+// embed the user's message
 async function embedQuery(text) {
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${process.env.GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${process.env.GEMINI_API_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'models/text-embedding-004',
-        content: { parts: [{ text }] }
+        model: 'models/gemini-embedding-001',
+        content: { parts: [{ text }] },
+        taskType: 'RETRIEVAL_QUERY',
+        outputDimensionality: 3072
       })
     }
   );
@@ -31,7 +34,7 @@ async function embedQuery(text) {
   return data.embedding.values;
 }
 
-// Step 2: vector search against the knowledge base
+//vector search against the knowledge base
 async function searchChunks(embedding, filters = {}) {
   const filterStage = {};
   if (filters.state) filterStage.state = filters.state;
@@ -40,11 +43,11 @@ async function searchChunks(embedding, filters = {}) {
   return RegulationChunk.aggregate([
     {
       $vectorSearch: {
-        index: 'vector_index',
+        index: 'autoembed_index',
         path: 'embedding',
         queryVector: embedding,
         numCandidates: 50,
-        limit: 3,
+        limit: 5,
         ...(Object.keys(filterStage).length ? { filter: filterStage } : {})
       }
     },
@@ -62,7 +65,7 @@ async function searchChunks(embedding, filters = {}) {
   ]);
 }
 
-// Step 4: generate a grounded answer using only the retrieved chunks
+//generate a grounded answer using only the retrieved chunks
 async function generateAnswer(message, chunks) {
   const context = chunks
     .map((c, i) => `[${i + 1}] (${c.documentTitle}, ${c.section}): ${c.text}`)
@@ -76,7 +79,7 @@ ${context}
 QUESTION: ${message}`;
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -98,14 +101,24 @@ QUESTION: ${message}`;
 const chatWithAI = async (message, industryId, userId) => {
   // 1. Embed the user's message
   const queryEmbedding = await embedQuery(message);
-
+  let filters = {};
+  if (industryId) {
+    const industry = await Industry.findById(industryId).select('state sector');
+    if (industry) {
+      filters = { state: industry.state, sector: industry.sector };
+    } else {
+      console.log('Industry not found for id:', industryId, '— searching unfiltered');
+    }
+  }
   // 2. Vector search against the regulatory knowledge base
   // TODO: once industryId links to a real Industry profile, pull state/sector
   // from it here and pass as filters, e.g. { state: profile.state, sector: profile.sector }
-  const matches = await searchChunks(queryEmbedding);
+  const matches = await searchChunks(queryEmbedding, filters);
 
   // 3. Fallback if nothing sufficiently relevant was found
   const topScore = matches[0]?.score ?? 0;
+  console.log('Top match score:', topScore, '| Threshold:', SIMILARITY_THRESHOLD);
+
   if (matches.length === 0 || topScore < SIMILARITY_THRESHOLD) {
     return {
       response:
@@ -126,7 +139,7 @@ const chatWithAI = async (message, industryId, userId) => {
       page: c.page,
       score: c.score
     })),
-    toolsUsed: ['vectorSearch', 'generation']
+    toolsUsed: industryId ? ['industryLookup', 'vectorSearch', 'generation'] : ['vectorSearch', 'generation']
   };
 };
 
