@@ -297,8 +297,8 @@ function IndustryProfileWizard() {
       {/* Header */}
       <header className="flex items-center justify-between border-b border-[#cbc4d2] bg-white px-6 py-4">
         <div className="flex items-center gap-2">
-          <Factory className="h-8 w-8 text-[#4f378a]" />
-          <span className="text-xl font-bold">Smart India Industrial Portal</span>
+          <img src="/udyog-sanchar-icon.png" alt="UdyogSanchar" className="h-10 w-auto" />
+          <span className="text-xl font-bold">UdyogSanchar</span>
         </div>
         <div className="flex items-center gap-4">
           {existingId && (
@@ -428,9 +428,9 @@ function PageHeader({ step, title }) {
   return (
     <>
       <div className="mb-8 flex items-center gap-3">
-        <Factory className="h-8 w-8 text-[#4f378a]" />
+        <img src="/udyog-sanchar-icon.png" alt="UdyogSanchar" className="h-12 w-auto" />
         <div>
-          <h1 className="text-2xl font-semibold">Industry Profile Wizard</h1>
+          <h1 className="text-2xl font-semibold">UdyogSanchar</h1>
           <p className="text-sm text-[#494551]">Step {step} of 4: {title}</p>
         </div>
       </div>

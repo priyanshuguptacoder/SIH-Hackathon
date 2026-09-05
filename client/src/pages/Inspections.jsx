@@ -475,8 +475,8 @@ export default function Inspections() {
       {/* Header */}
       <header className="flex items-center justify-between border-b border-[#cbc4d2] bg-white px-6 py-4">
         <div className="flex items-center gap-3">
-          <Factory className="h-7 w-7 text-[#4f378a]" />
-          <span className="text-lg font-bold text-[#1d1b20]">Smart India Industrial Portal</span>
+          <img src="/udyog-sanchar-icon.png" alt="UdyogSanchar" className="h-10 w-auto" />
+          <span className="text-lg font-bold text-[#1d1b20]">UdyogSanchar</span>
         </div>
         <button type="button" onClick={() => navigate("/dashboard")}
           className="flex items-center gap-2 rounded-lg border border-[#cbc4d2] px-4 py-2 text-sm font-semibold text-[#4f378a] hover:bg-[#f8f2fa]">

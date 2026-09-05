@@ -124,8 +124,8 @@ export default function Analysis() {
     <div className="min-h-screen bg-[#fdf7ff] flex flex-col">
       {/* Header */}
       <header className="flex items-center gap-3 border-b border-[#cbc4d2] bg-white px-6 py-4">
-        <Factory className="h-7 w-7 text-[#4f378a]" />
-        <span className="text-lg font-bold text-[#1d1b20]">Smart India Industrial Portal</span>
+        <img src="/udyog-sanchar-icon.png" alt="UdyogSanchar" className="h-10 w-auto" />
+        <span className="text-lg font-bold text-[#1d1b20]">UdyogSanchar</span>
       </header>
 
       {/* Body */}

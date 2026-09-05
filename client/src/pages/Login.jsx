@@ -69,12 +69,10 @@ const Login = () => {
           {/* Brand Header */}
           <div className="mb-10">
             <div className="flex items-center gap-3 mb-5">
-              <div className="flex items-center justify-center">
-                <ShieldCheck className="w-8 h-8 text-[#4f378a]" />
-              </div>
+              <img src="/udyog-sanchar-icon.png" alt="UdyogSanchar" className="h-12 w-auto" />
 
               <h1 className="text-[28px] md:text-[30px] font-bold tracking-tight text-[#4f378a]">
-                Industrial Portal
+                UdyogSanchar
               </h1>
             </div>
 
@@ -209,7 +207,7 @@ const Login = () => {
         {/* ================= FOOTER ================= */}
         <div className="absolute bottom-6 w-full text-center">
           <p className="text-xs tracking-wide font-semibold text-[#7a7582]">
-            © 2026 Industrial Approval & Compliance Management Platform
+            © 2026 UdyogSanchar — Industrial Compliance Platform
           </p>
         </div>
       </div>
@@ -236,7 +234,8 @@ const Login = () => {
             <Factory className="w-8 h-8 text-[#ffdf93] mb-3" />
 
             <h3 className="text-2xl font-bold mb-2">
-              Streamlining Industrial Governance
+              Smarter Compliance.
+              <br />Faster Approvals.
             </h3>
 
             <p className="text-sm leading-5 text-white/80 max-w-[420px]">

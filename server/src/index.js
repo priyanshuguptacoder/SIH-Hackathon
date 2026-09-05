@@ -77,7 +77,7 @@ app.get('/', (req, res) => {
   res.json({
     success: true,
     data: {
-      message: 'SIH Industrial Approval Platform API',
+      message: 'UdyogSanchar API',
       version: '1.0.0',
       mongoStatus: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
     }
