@@ -1,8 +1,3 @@
-/**
- * seed.js — SIH Demo Dataset
- * Sector: Textiles | State: Maharashtra
- * Run: node src/scripts/seed.js
- */
 require('dotenv').config();
 const mongoose = require('mongoose');
 const Approval       = require('../models/Approval');

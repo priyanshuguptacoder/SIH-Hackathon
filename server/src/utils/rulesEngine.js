@@ -1,5 +1,3 @@
-// Evaluates a deterministic rule condition against a profile object.
-
 const getFieldValue = (obj, path) => {
   return path.split('.').reduce((acc, part) => acc && acc[part], obj);
 };
@@ -12,7 +10,7 @@ const evaluateRule = (condition, profile) => {
   if (operator === 'AND') {
     return rules.every(r => evaluateRule(r, profile));
   }
-  
+
   if (operator === 'OR') {
     return rules.some(r => evaluateRule(r, profile));
   }

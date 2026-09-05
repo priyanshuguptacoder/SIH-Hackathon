@@ -1,5 +1,3 @@
-
-
 module.exports = [
     {
         text: "Textile manufacturing units generating wastewater exceeding 10 kilolitres per day are required to install an Effluent Treatment Plant (ETP) prior to commencement of operations. The ETP must reduce Biochemical Oxygen Demand (BOD) to below 30 mg/l and Chemical Oxygen Demand (COD) to below 250 mg/l before discharge into any water body or municipal sewer.",
