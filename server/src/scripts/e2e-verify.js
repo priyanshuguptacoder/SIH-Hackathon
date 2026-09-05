@@ -1,16 +1,3 @@
-#!/usr/bin/env node
-/**
- * e2e-verify.js
- * End-to-end backend verification against a live server.
- * Run: node src/scripts/e2e-verify.js
- *
- * Flow tested:
- *   Register → Login → Create Industry → Analyze Profile →
- *   Approval Roadmap → Create Application → Transitions →
- *   APPROVED → Compliance Generated → Complete Compliance →
- *   Next Recurring Item Created
- */
-
 require('dotenv').config();
 const mongoose = require('mongoose');
 

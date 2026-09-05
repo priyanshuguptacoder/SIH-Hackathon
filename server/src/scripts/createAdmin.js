@@ -1,7 +1,3 @@
-/**
- * createAdmin.js — Provision the Admin (Authority) account
- * Run: node src/scripts/createAdmin.js
- */
 require('dotenv').config();
 const mongoose = require('mongoose');
 const User = require('../models/User');
