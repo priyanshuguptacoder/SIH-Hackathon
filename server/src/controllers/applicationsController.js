@@ -154,17 +154,19 @@ const updateApplicationStatus = async (req, res) => {
         relatedId: application._id
       });
 
-      // Prevent duplicate compliance generation if approved multiple times or restarted
-      const existingCompliance = await ComplianceItem.findOne({
-        industryId: application.industryId._id,
-        approvalId: application.approvalId._id
-      });
+      // Data-driven compliance generation from ComplianceRule
+      const complianceRules = await ComplianceRule.find({ approvalId: application.approvalId._id });
+      if (complianceRules.length > 0) {
+        // Prevent duplicate compliance generation per-rule if approved multiple times or restarted
+        const existingItems = await ComplianceItem.find({
+          industryId: application.industryId._id,
+          approvalId: application.approvalId._id
+        });
+        const existingTexts = existingItems.map(item => item.requirementText);
 
-      if (!existingCompliance) {
-        // Data-driven compliance generation from ComplianceRule
-        const complianceRules = await ComplianceRule.find({ approvalId: application.approvalId._id });
-        if (complianceRules.length > 0) {
-          const items = complianceRules.map(rule => {
+        const itemsToCreate = complianceRules
+          .filter(rule => !existingTexts.includes(rule.requirementText))
+          .map(rule => {
             const dueDate = new Date(now);
             dueDate.setDate(now.getDate() + rule.daysUntilDue);
             return {
@@ -177,7 +179,9 @@ const updateApplicationStatus = async (req, res) => {
               source: rule.source || ''
             };
           });
-          await ComplianceItem.insertMany(items);
+
+        if (itemsToCreate.length > 0) {
+          await ComplianceItem.insertMany(itemsToCreate);
         }
       }
     }
