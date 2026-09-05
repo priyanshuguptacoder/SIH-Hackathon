@@ -130,7 +130,7 @@ const updateApplicationStatus = async (req, res) => {
     }
 
     if (status === 'INSPECTION') {
-      application.inspectionDate = now;
+      
 
       createNotification({
         userId: req.user.id,
@@ -154,23 +154,31 @@ const updateApplicationStatus = async (req, res) => {
         relatedId: application._id
       });
 
-      // Data-driven compliance generation from ComplianceRule
-      const complianceRules = await ComplianceRule.find({ approvalId: application.approvalId._id });
-      if (complianceRules.length > 0) {
-        const items = complianceRules.map(rule => {
-          const dueDate = new Date(now);
-          dueDate.setDate(now.getDate() + rule.daysUntilDue);
-          return {
-            industryId: application.industryId._id,
-            approvalId: application.approvalId._id,
-            requirementText: rule.requirementText,
-            recurrence: rule.recurrence,
-            status: 'UPCOMING',
-            dueDate,
-            source: rule.source || ''
-          };
-        });
-        await ComplianceItem.insertMany(items);
+      // Prevent duplicate compliance generation if approved multiple times or restarted
+      const existingCompliance = await ComplianceItem.findOne({
+        industryId: application.industryId._id,
+        approvalId: application.approvalId._id
+      });
+
+      if (!existingCompliance) {
+        // Data-driven compliance generation from ComplianceRule
+        const complianceRules = await ComplianceRule.find({ approvalId: application.approvalId._id });
+        if (complianceRules.length > 0) {
+          const items = complianceRules.map(rule => {
+            const dueDate = new Date(now);
+            dueDate.setDate(now.getDate() + rule.daysUntilDue);
+            return {
+              industryId: application.industryId._id,
+              approvalId: application.approvalId._id,
+              requirementText: rule.requirementText,
+              recurrence: rule.recurrence,
+              status: 'UPCOMING',
+              dueDate,
+              source: rule.source || ''
+            };
+          });
+          await ComplianceItem.insertMany(items);
+        }
       }
     }
 
