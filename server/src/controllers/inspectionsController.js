@@ -21,13 +21,23 @@ const createInspection = async (req, res) => {
       return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized' } });
     }
 
+    if (application.status !== 'INSPECTION') {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_STATE', message: 'Application must be in INSPECTION state to schedule an inspection' } });
+    }
+
+    const inspectionDateObj = new Date(scheduledDate);
+
     const inspection = await Inspection.create({
       applicationId,
       industryId: application.industryId._id,
       department,
-      scheduledDate: new Date(scheduledDate),
+      scheduledDate: inspectionDateObj,
       status: 'SCHEDULED'
     });
+
+    // Synchronize the application's inspectionDate
+    application.inspectionDate = inspectionDateObj;
+    await application.save();
 
     return res.status(201).json({ success: true, data: inspection });
   } catch (err) {
@@ -67,12 +77,24 @@ const updateInspection = async (req, res) => {
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Inspection not found' } });
     }
 
-    const industry = await Industry.findById(inspection.industryId);
+    const industry = await Industry.findById(inspection.industryId._id);
     if (industry.userId.toString() !== req.user.id && req.user.role !== 'Admin') {
       return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized' } });
     }
 
-    if (status) inspection.status = status;
+    if (status) {
+      const validTransitions = {
+        'SCHEDULED': ['COMPLETED', 'CANCELLED'],
+        'COMPLETED': [],
+        'CANCELLED': []
+      };
+      
+      const allowedNext = validTransitions[inspection.status];
+      if (!allowedNext || !allowedNext.includes(status)) {
+        return res.status(400).json({ success: false, error: { code: 'INVALID_TRANSITION', message: `Cannot transition inspection from ${inspection.status} to ${status}` } });
+      }
+      inspection.status = status;
+    }
     if (remarks) inspection.remarks = remarks;
     await inspection.save();
 

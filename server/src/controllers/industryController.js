@@ -68,9 +68,24 @@ const updateIndustryProfile = async (req, res) => {
       return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Not authorized to update this profile' } });
     }
 
+    // Whitelist allowed fields to prevent security issues (like updating userId)
+    const allowedFields = [
+      'companyName', 'sector', 'state', 'district', 'projectLocation', 
+      'pincode', 'investment', 'employees', 'productionCapacity', 
+      'manufacturingActivity', 'processes', 'waterUsage', 
+      'generatesWastewater', 'hazardousWaste', 'projectStage'
+    ];
+    
+    const updateData = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    }
+
     industry = await Industry.findByIdAndUpdate(
       req.params.id,
-      { $set: req.body },
+      { $set: updateData },
       { new: true, runValidators: true }
     );
 

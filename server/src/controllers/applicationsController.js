@@ -130,7 +130,7 @@ const updateApplicationStatus = async (req, res) => {
     }
 
     if (status === 'INSPECTION') {
-      application.inspectionDate = now;
+      
 
       createNotification({
         userId: req.user.id,
@@ -157,20 +157,32 @@ const updateApplicationStatus = async (req, res) => {
       // Data-driven compliance generation from ComplianceRule
       const complianceRules = await ComplianceRule.find({ approvalId: application.approvalId._id });
       if (complianceRules.length > 0) {
-        const items = complianceRules.map(rule => {
-          const dueDate = new Date(now);
-          dueDate.setDate(now.getDate() + rule.daysUntilDue);
-          return {
-            industryId: application.industryId._id,
-            approvalId: application.approvalId._id,
-            requirementText: rule.requirementText,
-            recurrence: rule.recurrence,
-            status: 'UPCOMING',
-            dueDate,
-            source: rule.source || ''
-          };
+        // Prevent duplicate compliance generation per-rule if approved multiple times or restarted
+        const existingItems = await ComplianceItem.find({
+          industryId: application.industryId._id,
+          approvalId: application.approvalId._id
         });
-        await ComplianceItem.insertMany(items);
+        const existingTexts = existingItems.map(item => item.requirementText);
+
+        const itemsToCreate = complianceRules
+          .filter(rule => !existingTexts.includes(rule.requirementText))
+          .map(rule => {
+            const dueDate = new Date(now);
+            dueDate.setDate(now.getDate() + rule.daysUntilDue);
+            return {
+              industryId: application.industryId._id,
+              approvalId: application.approvalId._id,
+              requirementText: rule.requirementText,
+              recurrence: rule.recurrence,
+              status: 'UPCOMING',
+              dueDate,
+              source: rule.source || ''
+            };
+          });
+
+        if (itemsToCreate.length > 0) {
+          await ComplianceItem.insertMany(itemsToCreate);
+        }
       }
     }
 
