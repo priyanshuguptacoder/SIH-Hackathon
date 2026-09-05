@@ -34,12 +34,10 @@ export default function AdminLayout({ children, title, subtitle }) {
       <aside className="fixed left-0 top-0 h-full w-60 flex flex-col bg-[#1e1a2e] text-white z-40">
         {/* Brand */}
         <div className="flex items-center gap-2.5 border-b border-white/10 px-5 py-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#4f378a]">
-            <Shield size={18} className="text-white" />
-          </div>
+          <img src="/udyog-sanchar-icon.png" alt="UdyogSanchar" className="h-10 w-auto" />
           <div>
-            <p className="text-sm font-bold leading-tight">Admin Portal</p>
-            <p className="text-[10px] text-white/50 uppercase tracking-wider">Authority Panel</p>
+            <p className="text-sm font-bold leading-tight">UdyogSanchar</p>
+            <p className="text-[10px] text-white/50 uppercase tracking-wider">Admin Panel</p>
           </div>
         </div>
 

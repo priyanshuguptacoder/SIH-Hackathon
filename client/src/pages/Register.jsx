@@ -78,10 +78,10 @@ const Register = () => {
           {/* Brand */}
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-5">
-              <ShieldCheck className="w-8 h-8 text-[#4f378a]" />
+              <img src="/udyog-sanchar-icon.png" alt="UdyogSanchar" className="h-12 w-auto" />
 
               <h1 className="text-[28px] md:text-[30px] font-bold tracking-tight text-[#4f378a]">
-                Industrial Portal
+                UdyogSanchar
               </h1>
             </div>
 

@@ -279,13 +279,22 @@ const Dashboard = () => {
       {/* ================= SIDEBAR ================= */}
       <aside className="fixed left-0 top-0 h-full z-50 hidden md:flex w-64 flex-col pt-4 pb-8 px-4 bg-white border-r border-[#cbc4d2] text-[#4f378a]">
 
-        <div className="mb-8 px-2 flex flex-col gap-2">
-          <span className="text-[30px] leading-9 font-black text-[#4f378a]">
-            Industrial Compliance
-          </span>
-          <span className="text-xs leading-4 tracking-[0.05em] font-semibold text-[#494551]">
-            SIH-2026
-          </span>
+        <div className="mb-8 px-2">
+          <div className="flex items-start gap-3">
+            <img
+              src="/udyog-sanchar-icon.png"
+              alt="UdyogSanchar"
+              className="h-8 w-8 object-contain shrink-0 mt-0.5"
+            />
+            <div className="flex flex-col">
+              <span className="text-xl leading-tight font-bold text-[#0f2942]">
+                UdyogSanchar
+              </span>
+              <span className="text-[9px] leading-tight tracking-wider font-semibold text-[#494551] uppercase mt-0.5">
+                Smart Compliance Platform
+              </span>
+            </div>
+          </div>
         </div>
 
         <nav className="flex-1 flex flex-col gap-2">
