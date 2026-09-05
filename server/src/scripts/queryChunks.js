@@ -3,25 +3,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 const mongoose = require('mongoose');
 const RegulationChunk = require('../models/RegulationChunk');
-
-async function embedText(text) {
-    const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$${process.env.GEMINI_API_KEY}`,
-        {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model: 'models/gemini-embedding-001',
-                content: { parts: [{ text }] },
-                taskType: 'RETRIEVAL_QUERY',
-                outputDimensionality: 3072
-            })
-        }
-    );
-    const data = await response.json();
-    if (!data.embedding) throw new Error('Embedding failed: ' + JSON.stringify(data));
-    return data.embedding.values;
-}
+const { embedQuery } = require('../services/ai/aiService');
 
 async function run() {
     const query = process.argv[2] || 'what are the wastewater rules for textile factories';
@@ -31,7 +13,7 @@ async function run() {
         console.log('Connected to MongoDB Atlas');
         console.log(`\nQuery: "${query}"\n`);
 
-        const queryEmbedding = await embedText(query);
+        const queryEmbedding = await embedQuery(query);
 
         const results = await RegulationChunk.aggregate([
             {

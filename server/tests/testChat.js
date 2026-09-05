@@ -9,8 +9,8 @@ async function run() {
 
     const result = await chatWithAI(
         'what are the wastewater rules for textile factories',
-        null, // industryId — not used yet, per the TODO in aiService.js
-        null  // userId
+        null,
+        null
     );
 
     console.log('\nResponse:', result.response);

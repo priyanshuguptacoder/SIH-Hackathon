@@ -9,6 +9,7 @@ const User = require('../models/User');
 const Industry = require('../models/Industry');
 const Document = require('../models/Document');
 const { createNotification } = require('./notificationsController');
+const { embedText } = require('../services/ai/aiService');
 const fs = require('fs');
 const path = require('path');
 
@@ -139,7 +140,204 @@ const listSchemes = async (req, res) => {
   }
 };
 
-// ─── Regulations (RAG upload) ─────────────────────────────────────────────────
+// ─── Regulations (RAG upload & Ingestion Pipeline) ───────────────────────────
+
+// Helper: Extract text from PDF page-by-page
+async function extractPdfPages(filePath) {
+  const dataBuffer = await fs.promises.readFile(filePath);
+  const pdfModule = require('pdf-parse');
+
+  if (pdfModule.PDFParse) {
+    const parser = new pdfModule.PDFParse({ data: dataBuffer });
+    try {
+      const result = await parser.getText();
+      if (result && Array.isArray(result.pages) && result.pages.length > 0) {
+        return result.pages.map(p => ({ pageNumber: p.num || 1, text: p.text || '' }));
+      }
+      return [{ pageNumber: 1, text: result?.text || '' }];
+    } finally {
+      if (typeof parser.destroy === 'function') {
+        await parser.destroy();
+      }
+    }
+  } else if (typeof pdfModule === 'function') {
+    const parsed = await pdfModule(dataBuffer);
+    return [{ pageNumber: 1, text: parsed.text || '' }];
+  } else if (typeof pdfModule.default === 'function') {
+    const parsed = await pdfModule.default(dataBuffer);
+    return [{ pageNumber: 1, text: parsed.text || '' }];
+  }
+  throw new Error('Unsupported pdf-parse module format');
+}
+
+// Helper: Split text into ~500-word chunks while keeping section headers attached to paragraphs
+function chunkPdfText(pages) {
+  const chunks = [];
+  let currentWords = [];
+  let currentStartPage = 1;
+  let lastSeenSection = 'General';
+
+  const countWords = (str) => str.trim().split(/\s+/).filter(Boolean).length;
+
+  for (const page of pages) {
+    const pageNum = page.pageNumber || 1;
+    const rawParagraphs = (page.text || '')
+      .split(/\n\s*\n+/)
+      .map(p => p.trim())
+      .filter(Boolean);
+
+    // Merge standalone section headers (e.g. "Section 4.2") with the subsequent paragraph
+    const paragraphs = [];
+    for (let i = 0; i < rawParagraphs.length; i++) {
+      const p = rawParagraphs[i];
+      const isHeader = /^(?:Section|Rule|Clause|Chapter|Article)\s+[\d\.]+/i.test(p) && countWords(p) < 15;
+      if (isHeader && i + 1 < rawParagraphs.length) {
+        paragraphs.push(p + '\n' + rawParagraphs[i + 1]);
+        i++;
+      } else {
+        paragraphs.push(p);
+      }
+    }
+
+    for (const para of paragraphs) {
+      const secMatch = para.match(/(?:Section|Rule|Clause|Chapter|Article)\s+\d+(?:\.\d+)*/i);
+      if (secMatch) {
+        lastSeenSection = secMatch[0];
+      }
+
+      const pWords = countWords(para);
+      if (pWords === 0) continue;
+
+      // If adding this paragraph exceeds ~500 words and we already have a substantial chunk
+      if (currentWords.length + pWords > 500 && currentWords.length >= 250) {
+        const text = currentWords.join('\n\n').trim();
+        const match = text.match(/(?:Section|Rule|Clause|Chapter|Article)\s+\d+(?:\.\d+)*/i);
+        chunks.push({
+          text,
+          page: currentStartPage,
+          section: match ? match[0] : lastSeenSection
+        });
+        currentWords = [];
+      }
+
+      if (currentWords.length === 0) {
+        currentStartPage = pageNum;
+      }
+
+      // If a single paragraph is longer than 500 words, break it into sub-slices
+      if (pWords > 500) {
+        const words = para.split(/\s+/);
+        for (let w = 0; w < words.length; w += 500) {
+          const sliceWords = words.slice(w, w + 500).join(' ');
+          if (currentWords.length > 0) {
+            currentWords.push(sliceWords);
+            const text = currentWords.join('\n\n').trim();
+            const match = text.match(/(?:Section|Rule|Clause|Chapter|Article)\s+\d+(?:\.\d+)*/i);
+            chunks.push({
+              text,
+              page: currentStartPage,
+              section: match ? match[0] : lastSeenSection
+            });
+            currentWords = [];
+          } else {
+            const match = sliceWords.match(/(?:Section|Rule|Clause|Chapter|Article)\s+\d+(?:\.\d+)*/i);
+            chunks.push({
+              text: sliceWords,
+              page: pageNum,
+              section: match ? match[0] : lastSeenSection
+            });
+          }
+        }
+      } else {
+        currentWords.push(para);
+      }
+    }
+  }
+
+  if (currentWords.length > 0) {
+    const text = currentWords.join('\n\n').trim();
+    if (text.length > 0) {
+      const match = text.match(/(?:Section|Rule|Clause|Chapter|Article)\s+\d+(?:\.\d+)*/i);
+      chunks.push({
+        text,
+        page: currentStartPage,
+        section: match ? match[0] : lastSeenSection
+      });
+    }
+  }
+
+  return chunks;
+}
+
+// Background async ingestion worker (fire-and-forget)
+async function processRegulationDocument({ docId, filePath, title, authority, state, sector }) {
+  const insertedChunkIds = [];
+  try {
+    if (!RegulationChunk) {
+      RegulationChunk = require('../models/RegulationChunk');
+    }
+
+    // 1. Read & extract all text from the PDF file
+    const pages = await extractPdfPages(filePath);
+    if (!pages || pages.length === 0 || pages.every(p => !p.text || !p.text.trim())) {
+      throw new Error('No readable text content found in the uploaded PDF');
+    }
+
+    // 2. Split into ~500 word chunks with section header preservation
+    const chunks = chunkPdfText(pages);
+    if (!chunks || chunks.length === 0) {
+      throw new Error('No chunks could be extracted from the document');
+    }
+
+    // 3. For each chunk, generate embedding and save to RegulationChunk
+    for (const chunk of chunks) {
+      const embedding = await embedText(chunk.text);
+
+      const created = await RegulationChunk.create({
+        text: chunk.text,
+        embedding,
+        documentTitle: title,
+        section: chunk.section || 'General',
+        page: chunk.page || 1,
+        state: state || 'General',
+        sector: sector || 'General',
+        authority: authority || 'General'
+      });
+
+      insertedChunkIds.push(created._id);
+    }
+
+    // 4. Update Document status to DONE
+    await Document.findByIdAndUpdate(docId, {
+      extractionStatus: 'DONE',
+      'extractedData.raw': `Ingested ${chunks.length} chunks from regulation "${title}".`
+    });
+
+    console.log(`[RAG Ingestion] Ingested ${chunks.length} chunks for "${title}" (Doc ID: ${docId})`);
+  } catch (err) {
+    console.error(`[RAG Ingestion Failed] Document ${docId}:`, err);
+
+    // Rollback any partially inserted chunks so the database is never left in a broken state
+    if (insertedChunkIds.length > 0 && RegulationChunk) {
+      try {
+        await RegulationChunk.deleteMany({ _id: { $in: insertedChunkIds } });
+        console.log(`[RAG Ingestion] Rolled back ${insertedChunkIds.length} partial chunks for document ${docId}`);
+      } catch (cleanErr) {
+        console.error('[RAG Ingestion] Error cleaning up partial chunks:', cleanErr);
+      }
+    }
+
+    // Set extractionStatus to FAILED
+    try {
+      await Document.findByIdAndUpdate(docId, {
+        extractionStatus: 'FAILED',
+        'extractedData.raw': `Ingestion failed: ${err.message}`
+      });
+    } catch (updateErr) {
+      console.error('[RAG Ingestion] Failed to update document failure status:', updateErr);
+    }
+  }
+}
 
 const uploadRegulation = async (req, res) => {
   try {
@@ -152,6 +350,7 @@ const uploadRegulation = async (req, res) => {
     }
 
     const fileUrl = `/uploads/${req.file.filename}`;
+    const filePath = req.file.path ? path.resolve(req.file.path) : path.join(__dirname, '../../uploads', req.file.filename);
 
     // Store metadata as a Document record (documentType = 'REGULATION')
     const doc = await Document.create({
@@ -166,8 +365,7 @@ const uploadRegulation = async (req, res) => {
       extractionStatus: 'PENDING',
     });
 
-    // In a full implementation you would trigger async PDF chunking + embedding here.
-    // For the prototype we record metadata and mark as PROCESSING.
+    // Mark as PROCESSING
     await Document.findByIdAndUpdate(doc._id, { extractionStatus: 'PROCESSING' });
 
     AuditLog.record({
@@ -178,15 +376,15 @@ const uploadRegulation = async (req, res) => {
       newValue: { title, authority, version }
     });
 
-    // Simulate async ingestion (fires & forgets)
-    setTimeout(async () => {
-      try {
-        await Document.findByIdAndUpdate(doc._id, {
-          extractionStatus: 'DONE',
-          'extractedData.raw': `Regulation "${title}" ingested. Chunking & embedding pending RAG pipeline.`,
-        });
-      } catch { /* ignore */ }
-    }, 3000);
+    // Trigger async ingestion pipeline (fire-and-forget, non-blocking)
+    processRegulationDocument({
+      docId: doc._id,
+      filePath,
+      title,
+      authority,
+      state,
+      sector
+    });
 
     return res.status(201).json({
       success: true,
