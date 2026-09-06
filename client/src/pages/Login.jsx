@@ -49,7 +49,7 @@ const Login = () => {
       }
     } catch (err) {
       const message =
-        err.response?.data?.error ||
+        err.response?.data?.error?.message || (typeof err.response?.data?.error === 'string' ? err.response?.data?.error : null) ||
         'Cannot connect to the authorization server.';
 
       setError(message);

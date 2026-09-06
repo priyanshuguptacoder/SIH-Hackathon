@@ -110,8 +110,7 @@ export default function Analysis() {
       const idx = stepStates.findIndex((s) => s === STEP_ACTIVE);
       if (idx !== -1) markStep(idx, STEP_ERROR);
       const msg =
-        err.response?.data?.error?.message ||
-        err.response?.data?.error ||
+        err.response?.data?.error?.message || (typeof err.response?.data?.error === 'string' ? err.response?.data?.error : null) ||
         err.message ||
         "Unexpected error during analysis.";
       setError(typeof msg === "string" ? msg : JSON.stringify(msg));

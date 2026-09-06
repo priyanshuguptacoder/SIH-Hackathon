@@ -444,8 +444,7 @@ export default function ApprovalRoadmap() {
       else setError("Failed to load roadmap.");
     } catch (err) {
       setError(
-        err.response?.data?.error?.message ||
-        err.response?.data?.error ||
+        err.response?.data?.error?.message || (typeof err.response?.data?.error === 'string' ? err.response?.data?.error : null) ||
         "Failed to load roadmap."
       );
     } finally {
@@ -471,8 +470,7 @@ export default function ApprovalRoadmap() {
       );
     } catch (err) {
       alert(
-        err.response?.data?.error?.message ||
-        err.response?.data?.error ||
+        err.response?.data?.error?.message || (typeof err.response?.data?.error === 'string' ? err.response?.data?.error : null) ||
         "Failed to start application."
       );
     } finally {

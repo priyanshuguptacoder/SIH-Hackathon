@@ -127,7 +127,7 @@ const Dashboard = () => {
         { role: "assistant", text: response || "No response received.", citations: citations || [] }
       ]);
     } catch (err) {
-      const msg = err.response?.data?.error?.message || err.response?.data?.error || "Failed to get a response. Please try again.";
+      const msg = err.response?.data?.error?.message || (typeof err.response?.data?.error === 'string' ? err.response?.data?.error : null) || "Failed to get a response. Please try again.";
       setAiError(typeof msg === "string" ? msg : "An error occurred.");
     } finally {
       setAiTyping(false);

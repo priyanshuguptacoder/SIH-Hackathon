@@ -282,8 +282,7 @@ export default function ApprovalDetail() {
       else setError("Failed to load approval details.");
     } catch (err) {
       setError(
-        err.response?.data?.error?.message ||
-        err.response?.data?.error ||
+        err.response?.data?.error?.message || (typeof err.response?.data?.error === 'string' ? err.response?.data?.error : null) ||
         "Failed to load approval details."
       );
     } finally {
@@ -311,8 +310,7 @@ export default function ApprovalDetail() {
       await load(); // refresh
     } catch (err) {
       setActionErr(
-        err.response?.data?.error?.message ||
-        err.response?.data?.error ||
+        err.response?.data?.error?.message || (typeof err.response?.data?.error === 'string' ? err.response?.data?.error : null) ||
         "Upload failed. Please try again."
       );
     } finally {
@@ -333,8 +331,7 @@ export default function ApprovalDetail() {
       await load();
     } catch (err) {
       setActionErr(
-        err.response?.data?.error?.message ||
-        err.response?.data?.error ||
+        err.response?.data?.error?.message || (typeof err.response?.data?.error === 'string' ? err.response?.data?.error : null) ||
         "Failed to update status."
       );
     } finally {
@@ -355,8 +352,7 @@ export default function ApprovalDetail() {
       await load();
     } catch (err) {
       setActionErr(
-        err.response?.data?.error?.message ||
-        err.response?.data?.error ||
+        err.response?.data?.error?.message || (typeof err.response?.data?.error === 'string' ? err.response?.data?.error : null) ||
         "Failed to update status."
       );
     } finally {

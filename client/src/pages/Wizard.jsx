@@ -249,7 +249,7 @@ function IndustryProfileWizard() {
       setSubmitted(true);
     } catch (err) {
       const msg =
-        err.response?.data?.error ||
+        err.response?.data?.error?.message || (typeof err.response?.data?.error === 'string' ? err.response?.data?.error : null) ||
         err.response?.data?.message ||
         "Failed to save profile. Please try again.";
       setError(typeof msg === "string" ? msg : JSON.stringify(msg));
