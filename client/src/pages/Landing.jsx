@@ -1,9 +1,63 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+// Custom hook for scroll reveals using IntersectionObserver
+const useScrollReveal = () => {
+  useEffect(() => {
+    const observerOptions = {
+      root: null,
+      rootMargin: '0px',
+      threshold: 0.15,
+    };
+
+    const observerCallback = (entries, observer) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('reveal-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+    const elements = document.querySelectorAll('.reveal-hidden');
+    elements.forEach((el) => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, []);
+};
+
 import { Link } from 'react-router-dom';
 
 const Landing = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [calcState, setCalcState] = useState('idle');
+  const [score, setScore] = useState(0);
+
+  useScrollReveal();
+
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) {
+      setTimeout(() => setScore(100), 0);
+      return;
+    }
+
+    let start = 0;
+    const end = 100;
+    const duration = 1500;
+    const increment = end / (duration / 16);
+    
+    const timer = setInterval(() => {
+      start += increment;
+      if (start >= end) {
+        setScore(100);
+        clearInterval(timer);
+      } else {
+        setScore(Math.floor(start));
+      }
+    }, 16);
+
+    return () => clearInterval(timer);
+  }, []);
 
   const handleCalc = (e) => {
     e.preventDefault();
@@ -34,17 +88,17 @@ const Landing = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-space-lg">
-            <Link className="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" to="/">Solutions</Link>
-            <Link className="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" to="/hub">Regulatory Schemes</Link>
-            <Link className="font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" to="/admin/knowledge">Knowledge Base</Link>
+            <Link className="font-label-md text-label-md text-on-surface-variant hover:text-primary hover:bg-surface-container-low px-3 py-1.5 rounded-md transition-all duration-200" to="/">Solutions</Link>
+            <Link className="font-label-md text-label-md text-on-surface-variant hover:text-primary hover:bg-surface-container-low px-3 py-1.5 rounded-md transition-all duration-200" to="/hub">Regulatory Schemes</Link>
+            <Link className="font-label-md text-label-md text-on-surface-variant hover:text-primary hover:bg-surface-container-low px-3 py-1.5 rounded-md transition-all duration-200" to="/admin/knowledge">Knowledge Base</Link>
           </nav>
 
           {/* Desktop CTAs */}
           <div className="hidden lg:flex items-center gap-space-md">
-            <Link className="font-label-md text-label-md text-primary hover:bg-surface-container-low px-space-md py-2 rounded-lg transition-colors" to="/admin/dashboard">Admin Portal</Link>
+            <Link className="font-label-md text-label-md text-primary hover:bg-surface-container-low px-4 py-2 rounded-lg transition-all duration-200" to="/admin/dashboard">Admin Portal</Link>
             <div className="w-px h-6 bg-surface-border"></div>
             <Link className="font-label-md text-label-md text-text-secondary hover:text-primary transition-colors" to="/login">Log In</Link>
-            <Link className="inline-flex items-center px-space-lg py-2 rounded-lg bg-primary font-label-md text-label-md text-on-primary hover:bg-primary-hover shadow-sm transition-colors" to="/register">
+            <Link className="inline-flex items-center px-6 py-2.5 rounded-lg bg-primary font-label-md text-label-md text-on-primary hover:bg-primary-hover hover:-translate-y-0.5 hover:shadow-md active:scale-95 transition-all duration-200 focus-ring-purple" to="/register">
               Get Started
             </Link>
           </div>
@@ -61,7 +115,7 @@ const Landing = () => {
 
       {/* MOBILE MENU */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 bg-surface-card pt-16 flex flex-col border-b border-surface-border shadow-lg lg:hidden">
+        <div className="fixed inset-0 z-40 bg-surface-card pt-16 flex flex-col border-b border-surface-border shadow-2xl lg:hidden animate-fade-in-up">
           <nav className="flex flex-col p-gutter-desktop gap-space-lg">
             <Link className="font-headline-sm text-headline-sm text-text-primary" to="/" onClick={() => setIsMobileMenuOpen(false)}>Solutions</Link>
             <Link className="font-headline-sm text-headline-sm text-text-primary" to="/hub" onClick={() => setIsMobileMenuOpen(false)}>Regulatory Schemes</Link>
@@ -79,7 +133,7 @@ const Landing = () => {
       <main className="w-full pt-16 flex-1 flex flex-col">
         {/* INSTITUTIONAL BANNER */}
         <section className="w-full bg-surface-container-high py-2 px-gutter-desktop border-b border-surface-border">
-          <div className="max-w-container-max mx-auto flex flex-col sm:flex-row items-center justify-between gap-space-sm text-center sm:text-left">
+          <div className="max-w-container-max mx-auto flex flex-col sm:flex-row items-center justify-between gap-space-sm text-center sm:text-left opacity-0 animate-fade-in-up">
             <div className="flex items-center gap-space-sm text-text-secondary">
               <span className="material-symbols-outlined text-[16px] text-primary">assured_workload</span>
               <span className="font-label-caps text-label-caps uppercase tracking-wider text-text-secondary">
@@ -99,14 +153,14 @@ const Landing = () => {
           <div className="max-w-container-max mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center relative z-10">
             {/* Left: Copy & CTAs */}
             <div className="flex flex-col items-start gap-space-xl">
-              <div className="inline-flex items-center gap-space-xs px-space-md py-1.5 rounded-full bg-primary-fixed text-on-primary-fixed shadow-sm border border-primary/10">
+              <div className="inline-flex items-center gap-space-xs px-space-md py-1.5 rounded-full bg-primary-fixed text-on-primary-fixed shadow-sm border border-primary/10 opacity-0 animate-fade-in-up delay-100">
                 <span className="material-symbols-outlined text-[16px]">verified_user</span>
                 <span className="font-label-caps text-label-caps tracking-widest uppercase font-bold">
                   Unified Prototype Workspace
                 </span>
               </div>
               
-              <div className="flex flex-col gap-space-md">
+              <div className="flex flex-col gap-space-md opacity-0 animate-fade-in-up delay-200">
                 <h1 className="font-display-lg text-display-lg text-text-primary tracking-tight leading-tight">
                   Faster Approvals.<br />
                   <span className="text-primary relative whitespace-nowrap">
@@ -120,32 +174,37 @@ const Landing = () => {
                 </p>
               </div>
               
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-space-md w-full sm:w-auto">
-                <Link className="inline-flex items-center justify-center gap-space-xs px-8 py-3.5 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-hover shadow-md transition-all group" to="/register">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-space-md w-full sm:w-auto opacity-0 animate-fade-in-up delay-300">
+                <Link className="inline-flex items-center justify-center gap-space-xs px-8 py-3.5 rounded-[10px] bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-hover shadow-md hover:shadow-lg hover:-translate-y-0.5 active:scale-95 transition-all duration-300 group focus-ring-purple" to="/register">
                   <span>Create Industry Profile</span>
                   <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
                 </Link>
-                <Link className="inline-flex items-center justify-center gap-space-xs px-8 py-3.5 rounded-lg bg-surface-card text-primary font-label-lg text-label-lg border border-surface-border shadow-sm hover:bg-surface-container-low transition-colors" to="/login">
+                <Link className="inline-flex items-center justify-center gap-space-xs px-8 py-3.5 rounded-[10px] bg-surface-card text-primary font-label-lg text-label-lg border border-surface-border shadow-sm hover:bg-surface-container-low hover:-translate-y-0.5 active:scale-95 transition-all duration-300 focus-ring-purple" to="/login">
                   <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
                   <span>Officer Login</span>
                 </Link>
               </div>
 
-              <div className="flex items-center gap-space-sm pt-space-sm text-text-secondary">
+              <div className="flex items-center gap-space-sm pt-space-sm text-text-secondary opacity-0 animate-fade-in-up delay-400">
                 <span className="material-symbols-outlined text-[18px] text-status-success">check_circle</span>
                 <span className="font-body-sm text-body-sm">Supporting Dummy Data for MH, PB, & UP</span>
               </div>
             </div>
             
             {/* Right: Simplified Dashboard Preview */}
-            <div className="relative w-full max-w-xl mx-auto lg:ml-auto">
-              <div className="bg-surface-card rounded-xl shadow-2xl border border-surface-border overflow-hidden">
+            <div className="relative w-full max-w-xl mx-auto lg:ml-auto opacity-0 animate-fade-scale-in delay-500">
+              <div className="bg-surface-card rounded-xl shadow-2xl border border-surface-border overflow-hidden transition-all duration-500 hover:shadow-[0_25px_50px_-12px_rgba(15,23,42,0.15)] group">
                 {/* Mock Browser Header */}
-                <div className="bg-surface-container-low px-4 py-3 flex items-center border-b border-surface-border gap-2">
-                  <div className="w-3 h-3 rounded-full bg-status-danger"></div>
-                  <div className="w-3 h-3 rounded-full bg-status-warning"></div>
-                  <div className="w-3 h-3 rounded-full bg-status-success"></div>
-                  <span className="ml-2 font-label-caps text-label-caps text-text-muted">Interactive Demo Preview</span>
+                <div className="bg-surface-container-low px-4 py-3 flex items-center justify-between border-b border-surface-border">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-status-danger"></div>
+                    <div className="w-3 h-3 rounded-full bg-status-warning"></div>
+                    <div className="w-3 h-3 rounded-full bg-status-success"></div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-status-success animate-pulse-subtle"></span>
+                    <span className="font-label-caps text-label-caps text-status-success uppercase font-bold tracking-wider">LIVE SYNC</span>
+                  </div>
                 </div>
                 
                 {/* Dashboard Content */}
@@ -161,9 +220,9 @@ const Landing = () => {
                   
                   {/* Metrics */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-surface-canvas border border-surface-border rounded-lg p-4">
+                    <div className="bg-surface-canvas border border-surface-border rounded-lg p-4 transition-colors duration-300 hover:border-primary/30">
                       <span className="font-label-caps text-label-caps text-text-muted block mb-1">COMPLIANCE SCORE</span>
-                      <span className="font-headline-lg text-headline-lg text-primary font-bold">100%</span>
+                      <span className="font-headline-lg text-headline-lg text-primary font-bold">{score}%</span>
                     </div>
                     <div className="bg-surface-canvas border border-surface-border rounded-lg p-4">
                       <span className="font-label-caps text-label-caps text-text-muted block mb-1">ACTIVE CLEARANCES</span>
@@ -190,24 +249,24 @@ const Landing = () => {
         </section>
 
         {/* METRICS SECTION */}
-        <section className="w-full bg-primary text-on-primary py-12 px-gutter-desktop">
+        <section className="reveal-hidden w-full bg-primary text-on-primary py-12 px-gutter-desktop">
           <div className="max-w-container-max mx-auto grid grid-cols-2 lg:grid-cols-4 gap-8 divide-y lg:divide-y-0 lg:divide-x divide-primary-hover">
-            <div className="flex flex-col items-center text-center p-4">
+            <div className="flex flex-col items-center text-center p-4 transition-transform duration-300 hover:-translate-y-1">
               <span className="font-metric-val text-metric-val font-bold text-secondary-fixed">3</span>
               <span className="font-headline-sm text-headline-sm font-semibold mt-2">Demo States</span>
               <span className="font-body-sm text-body-sm text-primary-fixed mt-1 opacity-90">Simulated regulatory logic</span>
             </div>
-            <div className="flex flex-col items-center text-center p-4">
+            <div className="flex flex-col items-center text-center p-4 transition-transform duration-300 hover:-translate-y-1">
               <span className="font-metric-val text-metric-val font-bold text-secondary-fixed">50+</span>
               <span className="font-headline-sm text-headline-sm font-semibold mt-2">Demo Units</span>
               <span className="font-body-sm text-body-sm text-primary-fixed mt-1 opacity-90">Seed profiles across sectors</span>
             </div>
-            <div className="flex flex-col items-center text-center p-4">
+            <div className="flex flex-col items-center text-center p-4 transition-transform duration-300 hover:-translate-y-1">
               <span className="font-metric-val text-metric-val font-bold text-secondary-fixed">Rule+AI</span>
               <span className="font-headline-sm text-headline-sm font-semibold mt-2">Assisted Workflow</span>
               <span className="font-body-sm text-body-sm text-primary-fixed mt-1 opacity-90">Deterministic checks + RAG</span>
             </div>
-            <div className="flex flex-col items-center text-center p-4">
+            <div className="flex flex-col items-center text-center p-4 transition-transform duration-300 hover:-translate-y-1">
               <span className="font-metric-val text-metric-val font-bold text-secondary-fixed">Tracked</span>
               <span className="font-headline-sm text-headline-sm font-semibold mt-2">Clearance Audits</span>
               <span className="font-body-sm text-body-sm text-primary-fixed mt-1 opacity-90">End-to-end transparent logging</span>
@@ -218,15 +277,15 @@ const Landing = () => {
         {/* CAPABILITIES SECTION */}
         <section className="w-full py-20 px-gutter-desktop bg-surface-canvas">
           <div className="max-w-container-max mx-auto flex flex-col gap-12">
-            <div className="flex flex-col items-center text-center max-w-2xl mx-auto gap-4">
+            <div className="reveal-hidden flex flex-col items-center text-center max-w-2xl mx-auto gap-4">
               <span className="font-label-caps text-label-caps uppercase tracking-widest text-primary font-bold">CORE CAPABILITIES</span>
               <h2 className="font-headline-lg text-headline-lg text-text-primary">Institutional Workflows Re-Engineered</h2>
               <p className="font-body-md text-body-md text-text-secondary">UdyogSanchar maps regulatory requirements, tracks applications, and leverages AI to simplify complex compliance guidelines.</p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-surface-card p-8 rounded-xl shadow-sm border border-surface-border hover:shadow-md transition-shadow">
-                <div className="w-12 h-12 rounded-lg bg-primary-fixed text-on-primary-fixed flex items-center justify-center mb-6">
+              <div className="bg-surface-card p-8 rounded-[12px] shadow-sm border border-surface-border hover:shadow-lg hover:border-primary/20 hover:-translate-y-1.5 transition-all duration-300 reveal-hidden group">
+                <div className="w-12 h-12 rounded-lg bg-primary-fixed text-on-primary-fixed flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 text-on-primary-fixed flex items-center justify-center mb-6">
                   <span className="material-symbols-outlined text-[28px]">account_tree</span>
                 </div>
                 <h3 className="font-headline-sm text-headline-sm text-text-primary mb-3">Approval Discovery</h3>
@@ -236,8 +295,8 @@ const Landing = () => {
                 </div>
               </div>
 
-              <div className="bg-surface-card p-8 rounded-xl shadow-sm border border-surface-border hover:shadow-md transition-shadow">
-                <div className="w-12 h-12 rounded-lg bg-secondary-container text-on-secondary-container flex items-center justify-center mb-6">
+              <div className="bg-surface-card p-8 rounded-[12px] shadow-sm border border-surface-border hover:shadow-lg hover:border-primary/20 hover:-translate-y-1.5 transition-all duration-300 reveal-hidden group">
+                <div className="w-12 h-12 rounded-lg bg-secondary-container text-on-secondary-container flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 text-on-secondary-container flex items-center justify-center mb-6">
                   <span className="material-symbols-outlined text-[28px]">pending_actions</span>
                 </div>
                 <h3 className="font-headline-sm text-headline-sm text-text-primary mb-3">Application Tracking</h3>
@@ -247,8 +306,8 @@ const Landing = () => {
                 </div>
               </div>
 
-              <div className="bg-surface-card p-8 rounded-xl shadow-sm border border-surface-border hover:shadow-md transition-shadow">
-                <div className="w-12 h-12 rounded-lg bg-status-info-bg text-status-info flex items-center justify-center mb-6">
+              <div className="bg-surface-card p-8 rounded-[12px] shadow-sm border border-surface-border hover:shadow-lg hover:border-primary/20 hover:-translate-y-1.5 transition-all duration-300 reveal-hidden group">
+                <div className="w-12 h-12 rounded-lg bg-status-info-bg text-status-info flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 text-status-info flex items-center justify-center mb-6">
                   <span className="material-symbols-outlined text-[28px]">payments</span>
                 </div>
                 <h3 className="font-headline-sm text-headline-sm text-text-primary mb-3">Scheme Intelligence</h3>
@@ -263,7 +322,7 @@ const Landing = () => {
 
         {/* APPLICATION QUEUE PREVIEW */}
         <section className="w-full py-20 px-gutter-desktop bg-surface-container-low border-y border-surface-border">
-          <div className="max-w-container-max mx-auto flex flex-col gap-10">
+          <div className="reveal-hidden max-w-container-max mx-auto flex flex-col gap-10">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
               <div>
                 <span className="font-label-caps text-label-caps text-primary uppercase font-bold">PLATFORM PREVIEW</span>
@@ -283,7 +342,7 @@ const Landing = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-border text-body-md font-body-md text-text-primary">
-                  <tr className="hover:bg-surface-canvas transition-colors">
+                  <tr className="hover:bg-surface-container-low transition-colors duration-200">
                     <td className="py-4 px-6 font-semibold">Pharma Works Pune</td>
                     <td className="py-4 px-6 text-text-secondary">Drug Manufacturing Compliance • MH</td>
                     <td className="py-4 px-6 text-text-muted">Today, 09:20 AM</td>
@@ -293,7 +352,7 @@ const Landing = () => {
                       </span>
                     </td>
                   </tr>
-                  <tr className="hover:bg-surface-canvas transition-colors">
+                  <tr className="hover:bg-surface-container-low transition-colors duration-200">
                     <td className="py-4 px-6 font-semibold">Automobile Components Noida</td>
                     <td className="py-4 px-6 text-text-secondary">Factory Registration • UP</td>
                     <td className="py-4 px-6 text-text-muted">Yesterday</td>
@@ -303,7 +362,7 @@ const Landing = () => {
                       </span>
                     </td>
                   </tr>
-                  <tr className="hover:bg-surface-canvas transition-colors">
+                  <tr className="hover:bg-surface-container-low transition-colors duration-200">
                     <td className="py-4 px-6 font-semibold">Textile Works Ludhiana</td>
                     <td className="py-4 px-6 text-text-secondary">Boiler Operation Cert • PB</td>
                     <td className="py-4 px-6 text-text-muted">Oct 2, 2025</td>
@@ -322,7 +381,7 @@ const Landing = () => {
         {/* CALCULATOR PREVIEW */}
         <section className="w-full py-20 px-gutter-desktop bg-surface-canvas">
           <div className="max-w-container-max mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div className="flex flex-col gap-6">
+            <div className="reveal-hidden flex flex-col gap-6">
               <span className="font-label-caps text-label-caps uppercase text-primary font-bold">INTERACTIVE PREVIEW</span>
               <h2 className="font-headline-lg text-headline-lg text-text-primary">Compliance Roadmap Generation</h2>
               <p className="font-body-md text-body-md text-text-secondary">
@@ -330,7 +389,7 @@ const Landing = () => {
                 This preview demonstrates the core logic used in the actual platform profiling engine.
               </p>
               
-              <div className="bg-surface-card p-6 rounded-xl border border-surface-border mt-4 flex flex-col gap-4 shadow-sm">
+              <div className={`bg-surface-card p-6 rounded-xl border border-surface-border mt-4 flex flex-col gap-4 shadow-sm transition-all duration-500 ${calcState === "done" ? "opacity-100 translate-y-0" : "opacity-80 translate-y-2"}`}>
                 <div className="flex items-center justify-between border-l-4 border-primary pl-4">
                   <div>
                     <h4 className="font-label-lg text-label-lg text-text-primary">The Factories Act, 1948</h4>
@@ -349,7 +408,7 @@ const Landing = () => {
               </div>
             </div>
 
-            <div className="bg-surface-card p-8 rounded-xl shadow-lg border border-surface-border flex flex-col gap-6">
+            <div className="bg-surface-card p-8 rounded-xl shadow-lg border border-surface-border flex flex-col gap-6 reveal-hidden delay-200">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-8 h-8 rounded bg-primary text-on-primary flex items-center justify-center">
                   <span className="material-symbols-outlined text-[18px]">calculate</span>
@@ -372,7 +431,7 @@ const Landing = () => {
 
               <button 
                 onClick={handleCalc}
-                className="w-full py-3.5 mt-2 rounded-lg bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-hover shadow-sm transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3.5 mt-2 rounded-[10px] bg-primary text-on-primary font-label-lg text-label-lg hover:bg-primary-hover hover:-translate-y-0.5 hover:shadow-md active:scale-95 transition-all duration-300 flex items-center justify-center gap-2 focus-ring-purple"
               >
                 {calcState === 'loading' && <span className="material-symbols-outlined animate-spin text-[18px]">sync</span>}
                 {calcState === 'done' && <span className="material-symbols-outlined text-[18px]">check_circle</span>}
@@ -387,18 +446,18 @@ const Landing = () => {
         {/* TIMELINE */}
         <section className="w-full py-20 px-gutter-desktop bg-surface-container-high border-y border-surface-border">
           <div className="max-w-container-max mx-auto flex flex-col gap-16">
-            <div className="text-center max-w-2xl mx-auto">
+            <div className="reveal-hidden text-center max-w-2xl mx-auto">
               <h2 className="font-headline-lg text-headline-lg text-text-primary">How Industrial Units Get Cleared</h2>
               <p className="font-body-md text-body-md text-text-secondary mt-4">A structured, four-step digital workflow utilized in our SIH prototype.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {['Profile Creation', 'Rule Pre-Validation', 'Officer Review', 'Status & Compliance'].map((step, idx) => (
-                <div key={idx} className="bg-surface-card p-8 rounded-xl shadow-sm border border-surface-border flex flex-col gap-4 relative">
-                  <div className="w-10 h-10 rounded-full bg-primary-fixed text-primary font-bold flex items-center justify-center mb-2">
+                <div key={idx} className="bg-surface-card p-8 rounded-[12px] shadow-sm border border-surface-border flex flex-col gap-4 relative hover:-translate-y-1.5 hover:shadow-md hover:border-primary/20 transition-all duration-300 reveal-hidden group">
+                  <div className="w-10 h-10 rounded-full bg-primary-fixed text-primary font-bold flex items-center justify-center mb-2 group-hover:bg-primary group-hover:text-on-primary transition-colors duration-300">
                     0{idx + 1}
                   </div>
-                  <h4 className="font-headline-sm text-headline-sm text-text-primary">{step}</h4>
+                  <h4 className="font-headline-sm text-headline-sm text-text-primary group-hover:text-primary transition-colors">{step}</h4>
                   <p className="font-body-sm text-body-sm text-text-secondary">
                     {idx === 0 && 'Submit unit details, machinery specifications, and location data securely.'}
                     {idx === 1 && 'Algorithmic checks match profile parameters against required statutory approvals.'}
@@ -414,23 +473,23 @@ const Landing = () => {
         {/* PORTAL DIRECTORY */}
         <section className="w-full py-20 px-gutter-desktop bg-surface-canvas">
           <div className="max-w-container-max mx-auto flex flex-col gap-12">
-            <div className="text-center">
+            <div className="reveal-hidden text-center">
               <span className="font-label-caps text-label-caps text-primary uppercase font-bold tracking-widest">SYSTEM TOPOLOGY</span>
               <h2 className="font-headline-lg text-headline-lg text-text-primary mt-2">Unified Portal Matrix</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <Link to="/dashboard" className="bg-surface-card p-8 rounded-xl shadow-sm border border-surface-border hover:border-primary transition-colors flex flex-col gap-4 group">
+              <Link to="/dashboard" className="bg-surface-card p-8 rounded-[12px] shadow-sm border border-surface-border hover:border-primary/30 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 flex flex-col gap-4 group reveal-hidden">
                 <span className="material-symbols-outlined text-primary text-[32px]">factory</span>
                 <h3 className="font-headline-sm text-headline-sm text-text-primary group-hover:text-primary transition-colors">Industry Workspace</h3>
                 <p className="font-body-md text-body-md text-text-secondary">Dashboards for industrial users to manage profiles, track clearances, and view recommended schemes.</p>
               </Link>
-              <Link to="/admin/dashboard" className="bg-surface-card p-8 rounded-xl shadow-sm border border-surface-border hover:border-primary transition-colors flex flex-col gap-4 group">
+              <Link to="/admin/dashboard" className="bg-surface-card p-8 rounded-[12px] shadow-sm border border-surface-border hover:border-primary/30 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 flex flex-col gap-4 group reveal-hidden">
                 <span className="material-symbols-outlined text-primary text-[32px]">shield_person</span>
                 <h3 className="font-headline-sm text-headline-sm text-text-primary group-hover:text-primary transition-colors">Admin Console</h3>
                 <p className="font-body-md text-body-md text-text-secondary">Dedicated interfaces for officers to manage regulatory rules, review applications, and audit workflows.</p>
               </Link>
-              <Link to="/admin/knowledge" className="bg-surface-card p-8 rounded-xl shadow-sm border border-surface-border hover:border-primary transition-colors flex flex-col gap-4 group">
+              <Link to="/admin/knowledge" className="bg-surface-card p-8 rounded-[12px] shadow-sm border border-surface-border hover:border-primary/30 hover:shadow-lg hover:-translate-y-1.5 transition-all duration-300 flex flex-col gap-4 group reveal-hidden">
                 <span className="material-symbols-outlined text-primary text-[32px]">menu_book</span>
                 <h3 className="font-headline-sm text-headline-sm text-text-primary group-hover:text-primary transition-colors">Knowledge & AI</h3>
                 <p className="font-body-md text-body-md text-text-secondary">Query regulatory chunks using our RAG-enabled AI assistant to resolve complex compliance ambiguities.</p>
@@ -441,7 +500,7 @@ const Landing = () => {
 
         {/* TRUST SECTION */}
         <section className="w-full py-20 px-gutter-desktop bg-surface-container-low border-t border-surface-border">
-          <div className="max-w-container-max mx-auto flex flex-col items-center text-center gap-6 max-w-3xl">
+          <div className="reveal-hidden max-w-container-max mx-auto flex flex-col items-center text-center gap-6 max-w-3xl">
             <h2 className="font-headline-lg text-headline-lg text-text-primary">Built for SIH Compliance Workflows</h2>
             <p className="font-body-lg text-body-lg text-text-secondary">
               UdyogSanchar demonstrates how deterministic rules, state-aware tracking, and AI-assisted guidance can modernize the industrial clearance lifecycle.
@@ -450,16 +509,17 @@ const Landing = () => {
         </section>
 
         {/* FINAL CTA */}
-        <section className="w-full bg-primary-container text-on-primary py-24 px-gutter-desktop">
-          <div className="max-w-container-max mx-auto flex flex-col items-center text-center gap-8">
+        <section className="w-full bg-primary-container text-on-primary py-24 px-gutter-desktop relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary-hover opacity-90 transition-opacity duration-1000 hover:opacity-100"></div>
+          <div className="reveal-hidden max-w-container-max mx-auto flex flex-col items-center text-center gap-8">
             <h2 className="font-display-lg text-display-lg font-bold text-on-primary max-w-2xl">
               Make Industrial Compliance Easier to Navigate.
             </h2>
             <div className="flex flex-col sm:flex-row items-center gap-4">
-              <Link className="px-8 py-4 rounded-lg bg-secondary-fixed text-on-secondary-fixed font-label-lg text-label-lg font-bold hover:bg-secondary transition-all shadow-md" to="/register">
+              <Link className="w-full sm:w-auto px-8 py-4 rounded-[10px] bg-secondary-fixed text-on-secondary-fixed font-label-lg text-label-lg font-bold hover:bg-secondary hover:-translate-y-0.5 active:scale-95 transition-all duration-300 shadow-md hover:shadow-lg focus-ring-purple" to="/register">
                 Create Industry Profile
               </Link>
-              <Link className="px-8 py-4 rounded-lg bg-surface-card text-primary font-label-lg text-label-lg font-bold hover:bg-surface-container-low transition-colors shadow-sm" to="/login">
+              <Link className="w-full sm:w-auto px-8 py-4 rounded-[10px] bg-surface-card text-primary font-label-lg text-label-lg font-bold hover:bg-surface-container-low hover:-translate-y-0.5 active:scale-95 transition-all duration-300 shadow-sm hover:shadow-md focus-ring-purple" to="/login">
                 Access Existing Portal
               </Link>
             </div>
