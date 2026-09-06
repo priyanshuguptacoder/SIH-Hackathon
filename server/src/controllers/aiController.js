@@ -5,10 +5,11 @@ const { chatWithAI } = require('../services/ai/aiService');
 // @access  Protected
 const chat = async (req, res) => {
   try {
-    const { message, industryId } = req.body;
-    
+    const message = req.body.message || req.body.query;
+    const { industryId } = req.body;
+
     if (!message) {
-      return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Message is required' } });
+      return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'message or query is required' } });
     }
 
     const aiResponse = await chatWithAI(message, industryId, req.user.id);
