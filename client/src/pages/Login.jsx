@@ -132,12 +132,13 @@ const Login = () => {
                   PASSWORD
                 </label>
 
-                <Link
-                  to="#"
+                <button
+                  type="button"
+                  onClick={() => alert("Password recovery is currently disabled in prototype mode.")}
                   className="text-sm text-[#4f378a] hover:text-[#6750a4] font-semibold transition-colors"
                 >
                   Forgot Password?
-                </Link>
+                </button>
               </div>
 
               <div className="relative group">
