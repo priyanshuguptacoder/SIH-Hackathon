@@ -1,4 +1,120 @@
 @import "tailwindcss";
+
+@layer base {
+  html,body { margin: 0; padding: 0; }
+  /* Custom typography classes */
+
+  .text-metric-val {
+    font-size: 2rem;
+    line-height: 2.25rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+  .font-metric-val {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .text-body-sm {
+    font-size: 0.75rem;
+    line-height: 1.125rem;
+    font-weight: 400;
+    
+  }
+  .font-body-sm {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .text-headline-lg {
+    font-size: 1.75rem;
+    line-height: 2.25rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .font-headline-lg {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .text-body-lg {
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 400;
+    
+  }
+  .font-body-lg {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .text-headline-sm {
+    font-size: 1.125rem;
+    line-height: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .font-headline-sm {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .text-label-caps {
+    font-size: 0.6875rem;
+    line-height: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+  }
+  .font-label-caps {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .text-body-md {
+    font-size: 0.875rem;
+    line-height: 1.375rem;
+    font-weight: 400;
+    
+  }
+  .font-body-md {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .text-label-md {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .font-label-md {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .text-label-lg {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+  .font-label-lg {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .text-display-lg {
+    font-size: 2.25rem;
+    line-height: 2.75rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+  .font-display-lg {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .text-headline-md {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+  .font-headline-md {
+    font-family: 'Inter', sans-serif;
+  }
+
+}
 @theme {
   --color-text-primary: #0F172A;
   --color-on-primary-container: #c0a4fe;
@@ -79,26 +195,4 @@
   --spacing-space-md: 0.75rem;
   --spacing-space-2xl: 3rem;
   --spacing-space-xs: 0.25rem;
-  --font-metric-val: Inter;
-  --font-body-sm: Inter;
-  --font-headline-lg: Inter;
-  --font-body-lg: Inter;
-  --font-headline-sm: Inter;
-  --font-label-caps: Inter;
-  --font-body-md: Inter;
-  --font-label-md: Inter;
-  --font-label-lg: Inter;
-  --font-display-lg: Inter;
-  --font-headline-md: Inter;
-  --text-metric-val: 2rem;
-  --text-body-sm: 0.75rem;
-  --text-headline-lg: 1.75rem;
-  --text-body-lg: 1rem;
-  --text-headline-sm: 1.125rem;
-  --text-label-caps: 0.6875rem;
-  --text-body-md: 0.875rem;
-  --text-label-md: 0.75rem;
-  --text-label-lg: 0.875rem;
-  --text-display-lg: 2.25rem;
-  --text-headline-md: 1.25rem;
 }
