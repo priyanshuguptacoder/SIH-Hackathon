@@ -8,7 +8,7 @@ async function run() {
     console.log('Connected to MongoDB Atlas');
 
     const result = await chatWithAI(
-        'what are the wastewater rules for textile factories',
+        'tell me a joke',
         null,
         null
     );
