@@ -60,6 +60,7 @@ const App = () => {
           <Route path="/admin/regulations"      element={<A><AdminRegulations /></A>} />
           <Route path="/admin/knowledge"        element={<A><AdminKnowledgeBase /></A>} />
           <Route path="/admin/audit"            element={<A><AdminAuditLog /></A>} />
+          <Route path="*"                       element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </AuthProvider>

@@ -74,11 +74,11 @@ const Landing = () => {
       <header className="fixed top-0 left-0 right-0 z-50 bg-surface-card/90 backdrop-blur-md border-b border-surface-border">
         <div className="h-16 max-w-container-max mx-auto px-gutter-desktop flex items-center justify-between gap-space-md">
           {/* Logo & Brand */}
-          <div className="flex items-center gap-space-sm">
+          <div className="flex items-center gap-space-sm group cursor-pointer" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
             <img 
               alt="UdyogSanchar Logo" 
-              className="h-8 w-auto object-contain" 
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBSqW1tNFVmZJ0N_DUlPZVV7OT16FQoivX9tEGqLahNw7HXuMNVpX5O3UhjdeX41E1W35ax3Mgat2Naf0Z6aTlBpDz9ZNgEfmIrnB6HiOUAeTo0TGyZo4QFYOxYzWpGgmNV8oyCSSScawTK-AU_j_0KUMqJgaXrt8pa6I2LxtUCllnZe72HFCYvh_W6wZDw7pdtx2R1AYGglicw0V08f-zKlR3Drm_lY54-fLVUmj16tevs4sGLghcC"
+              className="h-8 w-auto object-contain transition-transform duration-300 group-hover:scale-105" 
+              src="/udyog-sanchar-icon.png"
             />
             <div className="flex items-center gap-space-xs">
               <span className="font-headline-sm text-headline-sm text-primary tracking-tight font-bold">UdyogSanchar</span>
@@ -90,6 +90,8 @@ const Landing = () => {
           <nav className="hidden lg:flex items-center gap-space-lg">
             <Link className="font-label-md text-label-md text-on-surface-variant hover:text-primary hover:bg-surface-container-low px-3 py-1.5 rounded-md transition-all duration-200" to="/">Solutions</Link>
             <Link className="font-label-md text-label-md text-on-surface-variant hover:text-primary hover:bg-surface-container-low px-3 py-1.5 rounded-md transition-all duration-200" to="/hub">Regulatory Schemes</Link>
+            <Link className="font-label-md text-label-md text-on-surface-variant hover:text-primary hover:bg-surface-container-low px-3 py-1.5 rounded-md transition-all duration-200" to="/dashboard">Industry Hub</Link>
+            <Link className="font-label-md text-label-md text-on-surface-variant hover:text-primary hover:bg-surface-container-low px-3 py-1.5 rounded-md transition-all duration-200" to="/inspections">Inspection Tracker</Link>
             <Link className="font-label-md text-label-md text-on-surface-variant hover:text-primary hover:bg-surface-container-low px-3 py-1.5 rounded-md transition-all duration-200" to="/admin/knowledge">Knowledge Base</Link>
           </nav>
 
@@ -119,6 +121,8 @@ const Landing = () => {
           <nav className="flex flex-col p-gutter-desktop gap-space-lg">
             <Link className="font-headline-sm text-headline-sm text-text-primary" to="/" onClick={() => setIsMobileMenuOpen(false)}>Solutions</Link>
             <Link className="font-headline-sm text-headline-sm text-text-primary" to="/hub" onClick={() => setIsMobileMenuOpen(false)}>Regulatory Schemes</Link>
+            <Link className="font-headline-sm text-headline-sm text-text-primary" to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>Industry Hub</Link>
+            <Link className="font-headline-sm text-headline-sm text-text-primary" to="/inspections" onClick={() => setIsMobileMenuOpen(false)}>Inspection Tracker</Link>
             <Link className="font-headline-sm text-headline-sm text-text-primary" to="/admin/knowledge" onClick={() => setIsMobileMenuOpen(false)}>Knowledge Base</Link>
             <div className="h-px w-full bg-surface-border my-space-sm"></div>
             <Link className="font-headline-sm text-headline-sm text-primary" to="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)}>Admin Portal</Link>
