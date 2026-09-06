@@ -84,7 +84,7 @@ async function searchChunks(embedding, filters = {}) {
   if (filters.state) filterStage.state = filters.state;
   if (filters.sector) filterStage.sector = filters.sector;
 
-  return RegulationChunk.aggregate([
+  let results = await RegulationChunk.aggregate([
     {
       $vectorSearch: {
         index: 'autoembed_index',
@@ -95,18 +95,18 @@ async function searchChunks(embedding, filters = {}) {
         ...(Object.keys(filterStage).length ? { filter: filterStage } : {})
       }
     },
-    {
-      $project: {
-        text: 1,
-        state: 1,
-        sector: 1,
-        section: 1,
-        page: 1,
-        documentTitle: 1,
-        score: { $meta: 'vectorSearchScore' }
-      }
-    }
+    { $project: { text: 1, state: 1, sector: 1, section: 1, page: 1, documentTitle: 1, score: { $meta: 'vectorSearchScore' } } }
   ]);
+
+  // If filtered search found nothing, retry unfiltered rather than returning empty
+  if (results.length === 0 && Object.keys(filterStage).length > 0) {
+    results = await RegulationChunk.aggregate([
+      { $vectorSearch: { index: 'autoembed_index', path: 'embedding', queryVector: embedding, numCandidates: 50, limit: 5 } },
+      { $project: { text: 1, state: 1, sector: 1, section: 1, page: 1, documentTitle: 1, score: { $meta: 'vectorSearchScore' } } }
+    ]);
+  }
+
+  return results;
 }
 
 //generate a grounded answer using only the retrieved chunks
