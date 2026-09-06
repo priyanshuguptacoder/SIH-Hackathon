@@ -48,23 +48,27 @@ const GeminiProvider = {
    * @param {string} prompt - The full prompt to send.
    * @returns {Promise<string>} The generated text.
    */
-  async generateText(prompt) {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
+  async generateText(prompt, retries = 2) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        }
+      );
+      const data = await response.json();
+      const answerText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (answerText) return answerText;
+
+      const isRetryable = data?.error?.status === 'UNAVAILABLE';
+      if (isRetryable && attempt < retries) {
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
       }
-    );
-    const data = await response.json();
-    const answerText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!answerText) {
       throw new Error('Generation failed: ' + JSON.stringify(data));
     }
-    return answerText;
   }
 };
 
@@ -144,65 +148,67 @@ const AI_UNAVAILABLE_RESPONSE = {
 };
 
 const chatWithAI = async (message, industryId, userId) => {
-  // 1. Embed the user's message
-  let queryEmbedding;
   try {
-    queryEmbedding = await embedQuery(message);
-  } catch (err) {
-    console.error('Gemini embedding error:', err.message);
-    return AI_UNAVAILABLE_RESPONSE;
-  }
-
-  let filters = {};
-  if (industryId) {
-    const industry = await Industry.findById(industryId).select('state sector');
-    if (industry) {
-      filters = { state: industry.state, sector: industry.sector };
-    } else {
-      console.log('Industry not found for id:', industryId, '— searching unfiltered');
+    // 1. Embed the user's message
+    let queryEmbedding;
+    try {
+      queryEmbedding = await embedQuery(message);
+    } catch (err) {
+      console.error('Gemini embedding error:', err.message);
+      return AI_UNAVAILABLE_RESPONSE;
     }
-  }
-  // 2. Vector search against the regulatory knowledge base
-  // TODO: once industryId links to a real Industry profile, pull state/sector
-  // from it here and pass as filters, e.g. { state: profile.state, sector: profile.sector }
-  const matches = await searchChunks(queryEmbedding, filters);
 
-  // 3. Fallback if nothing sufficiently relevant was found
-  const topScore = matches[0]?.score ?? 0;
-  console.log('Top match score:', topScore, '| Threshold:', SIMILARITY_THRESHOLD);
+    let filters = {};
+    if (industryId) {
+      const industry = await Industry.findById(industryId).select('state sector');
+      if (industry) {
+        filters = { state: industry.state, sector: industry.sector };
+      } else {
+        console.log('Industry not found for id:', industryId, '— searching unfiltered');
+      }
+    }
 
-  if (matches.length === 0 || topScore < SIMILARITY_THRESHOLD) {
+    // 2. Vector search against the regulatory knowledge base
+    const matches = await searchChunks(queryEmbedding, filters);
+
+    // 3. Fallback if nothing sufficiently relevant was found
+    const topScore = matches[0]?.score ?? 0;
+    console.log('Top match score:', topScore, '| Threshold:', SIMILARITY_THRESHOLD);
+
+    if (matches.length === 0 || topScore < SIMILARITY_THRESHOLD) {
+      return {
+        response: "No sufficiently verified source was found in the regulatory knowledge base. Please verify with the relevant authority.",
+        citations: [],
+        toolsUsed: ['vectorSearch']
+      };
+    }
+
+    // 4. Generate a grounded response using only the retrieved chunks
+    let answer;
+    try {
+      answer = await generateAnswer(message, matches);
+    } catch (err) {
+      console.error('Gemini generation error:', err.message);
+      return AI_UNAVAILABLE_RESPONSE;
+    }
+
+    // 5. If the model refused the question (prompt injection defense), don't cite sources
+    const isRefusal = /i can only answer regulatory compliance questions/i.test(answer);
+
     return {
-      response:
-        "No sufficiently verified source was found in the regulatory knowledge base. Please verify with the relevant authority.",
-      citations: [],
-      toolsUsed: ['vectorSearch']
+      response: answer,
+      citations: isRefusal ? [] : matches.map((c) => ({
+        documentTitle: c.documentTitle,
+        section: c.section,
+        page: c.page,
+        score: c.score
+      })),
+      toolsUsed: industryId ? ['industryLookup', 'vectorSearch', 'generation'] : ['vectorSearch', 'generation']
     };
-  }
-
-  // 4. Generate a grounded response using only the retrieved chunks
-  let answer;
-  try {
-    answer = await generateAnswer(message, matches);
   } catch (err) {
-    console.error('Gemini generation error:', err.message);
+    console.error('chatWithAI unexpected error:', err.message);
     return AI_UNAVAILABLE_RESPONSE;
   }
-
-  // 5. If the model refused the question (prompt injection defense),
-  //    don't cite sources — it would be misleading.
-  const isRefusal = /i can only answer regulatory compliance questions/i.test(answer);
-
-  return {
-    response: answer,
-    citations: isRefusal ? [] : matches.map((c) => ({
-      documentTitle: c.documentTitle,
-      section: c.section,
-      page: c.page,
-      score: c.score
-    })),
-    toolsUsed: industryId ? ['industryLookup', 'vectorSearch', 'generation'] : ['vectorSearch', 'generation']
-  };
 };
 
 module.exports = {
