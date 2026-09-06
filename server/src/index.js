@@ -34,8 +34,9 @@ app.use(
     origin: function (origin, callback) {
       if (!origin) return callback(null, true);
       
+      const clientUrl = process.env.CLIENT_URL ? process.env.CLIENT_URL.replace(/\/$/, '') : null;
       const allowedOrigins = [
-        process.env.CLIENT_URL,
+        clientUrl,
         'http://localhost:5173',
         'http://localhost:3000'
       ].filter(Boolean);
@@ -47,7 +48,7 @@ app.use(
       ) {
         return callback(null, true);
       }
-      return callback(new Error('Not allowed by CORS'));
+      return callback(null, false);
     },
     credentials: true,
   })
